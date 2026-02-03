@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Search, Calendar, Edit, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Calendar, Edit, Trash2, ChevronLeft, ChevronRight, Filter } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,6 +18,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
+const serviceTypes = ["All Types", "Agile", "Service", "SAFe", "Project", "Quality", "Business", "Generative AI"];
+
 const mockCourses = [
   { id: "CRS001", name: "Agile Fundamentals", mentor: "John Smith", price: 499, serviceType: "Agile", startDate: "2024-03-01", endDate: "2024-03-15" },
   { id: "CRS002", name: "SAFe Practitioner", mentor: "Sarah Johnson", price: 899, serviceType: "SAFe", startDate: "2024-03-10", endDate: "2024-03-25" },
@@ -23,6 +27,7 @@ const mockCourses = [
   { id: "CRS004", name: "Service Excellence", mentor: "Emily Brown", price: 599, serviceType: "Service", startDate: "2024-03-20", endDate: "2024-04-05" },
   { id: "CRS005", name: "Quality Assurance Master", mentor: "David Lee", price: 799, serviceType: "Quality", startDate: "2024-04-01", endDate: "2024-04-20" },
   { id: "CRS006", name: "Generative AI Basics", mentor: "Lisa Chen", price: 1099, serviceType: "Generative AI", startDate: "2024-04-10", endDate: "2024-04-30" },
+  { id: "CRS007", name: "Business Analysis Essentials", mentor: "Tom Harris", price: 649, serviceType: "Business", startDate: "2024-04-15", endDate: "2024-05-01" },
 ];
 
 const CourseListing = () => {
@@ -32,6 +37,7 @@ const CourseListing = () => {
     endDate: "",
     courseName: "",
     mentorName: "",
+    courseType: "All Types",
   });
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -42,6 +48,7 @@ const CourseListing = () => {
     if (filters.mentorName && !course.mentor.toLowerCase().includes(filters.mentorName.toLowerCase())) return false;
     if (filters.startDate && course.startDate < filters.startDate) return false;
     if (filters.endDate && course.endDate > filters.endDate) return false;
+    if (filters.courseType !== "All Types" && course.serviceType !== filters.courseType) return false;
     return true;
   });
 
@@ -69,7 +76,7 @@ const CourseListing = () => {
 
         {/* Filters */}
         <div className="admin-card p-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="relative">
               <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
@@ -108,17 +115,32 @@ const CourseListing = () => {
                 className="pl-10"
               />
             </div>
+            <Select
+              value={filters.courseType}
+              onValueChange={(value) => setFilters({ ...filters, courseType: value })}
+            >
+              <SelectTrigger>
+                <Filter className="w-4 h-4 mr-2 text-muted-foreground" />
+                <SelectValue placeholder="Course Type" />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border">
+                {serviceTypes.map((type) => (
+                  <SelectItem key={type} value={type}>{type}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
         {/* Table */}
         <div className="table-container overflow-x-auto">
-          <table className="w-full min-w-[600px]">
+          <table className="w-full min-w-[700px]">
             <thead>
               <tr>
                 <th className="table-header-cell">Course ID</th>
                 <th className="table-header-cell">Course Name</th>
                 <th className="table-header-cell">Mentor</th>
+                <th className="table-header-cell">Course Type</th>
                 <th className="table-header-cell">Price</th>
                 <th className="table-header-cell text-right">Actions</th>
               </tr>
@@ -136,6 +158,9 @@ const CourseListing = () => {
                   </td>
                   <td className="px-4 py-3 font-medium text-foreground">{course.name}</td>
                   <td className="px-4 py-3 text-muted-foreground">{course.mentor}</td>
+                  <td className="px-4 py-3">
+                    <Badge variant="secondary">{course.serviceType}</Badge>
+                  </td>
                   <td className="px-4 py-3 font-medium text-foreground">${course.price}</td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
