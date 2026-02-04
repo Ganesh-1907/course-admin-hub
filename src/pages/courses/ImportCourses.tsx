@@ -3,11 +3,14 @@ import { Upload, FileSpreadsheet, CheckCircle, XCircle, Info } from "lucide-reac
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { importCourses } from "@/services/api";
 
 const ImportCourses = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
+  const [isUploading, setIsUploading] = useState(false);
+  const [result, setResult] = useState<{ totalRows: number; importedCount: number; failedCount: number } | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -25,14 +28,38 @@ const ImportCourses = () => {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!file) {
       toast.error("Please select a file first");
       return;
     }
-    // Simulate upload
-    setStatus("success");
-    toast.success("Courses imported successfully!");
+    setIsUploading(true);
+    setStatus("idle");
+    try {
+      const response = await importCourses(file);
+      if (response.success && response.data) {
+        setResult({
+          totalRows: response.data.totalRows || 0,
+          importedCount: response.data.importedCount || 0,
+          failedCount: response.data.failedCount || 0,
+        });
+        if ((response.data.importedCount || 0) > 0) {
+          setStatus("success");
+          toast.success("Courses imported successfully!");
+        } else {
+          setStatus("error");
+          toast.error("No valid rows found in the uploaded file");
+        }
+      } else {
+        setStatus("error");
+        toast.error(response.message || "Failed to import courses");
+      }
+    } catch (error) {
+      setStatus("error");
+      toast.error(error instanceof Error ? error.message : "Failed to import courses");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -48,14 +75,24 @@ const ImportCourses = () => {
           <div className="bg-secondary/50 border border-border rounded-lg p-4">
             <div className="flex gap-3">
               <Info className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-              <div className="text-sm">
+              <div className="text-sm w-full">
                 <p className="font-medium text-foreground mb-2">File Format Requirements:</p>
                 <ul className="list-disc list-inside space-y-1 text-muted-foreground">
                   <li>File must be in .xls or .xlsx format</li>
                   <li>First row should contain column headers</li>
-                  <li>Required columns: Course Name, Description, Mentor, Start Date, End Date, Price, Service Type</li>
-                  <li>Optional columns: Discount Percentage, Image URL, Brochure URL</li>
+                  <li>Required columns: Course Name, Mentor Name, Description, Service Type, Start Date, End Date, Duration, Fee, Discount, Final Price, Level</li>
+                  <li>Service Type values: Agile, Service, SAFe, Project, Quality, Business, Generative AI</li>
+                  <li>Level values: Beginner, Intermediate, Advanced</li>
                 </ul>
+                <div className="mt-3">
+                  <a
+                    href="/course-import-template.xlsx"
+                    download
+                    className="text-primary hover:underline font-medium"
+                  >
+                    Download sample template (Excel)
+                  </a>
+                </div>
               </div>
             </div>
           </div>
@@ -67,12 +104,12 @@ const ImportCourses = () => {
                 <CheckCircle className="w-12 h-12 text-success mx-auto mb-3" />
                 <p className="font-medium text-foreground">Import Successful!</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  All courses have been imported successfully.
+                  Imported {result?.importedCount ?? 0} of {result?.totalRows ?? 0} rows.
                 </p>
                 <Button
                   variant="outline"
                   className="mt-4"
-                  onClick={() => { setFile(null); setStatus("idle"); }}
+                  onClick={() => { setFile(null); setStatus("idle"); setResult(null); }}
                 >
                   Import Another File
                 </Button>
@@ -84,10 +121,15 @@ const ImportCourses = () => {
                 <p className="text-sm text-muted-foreground mt-1">
                   There was an error processing your file. Please check the format and try again.
                 </p>
+                {result && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Imported {result.importedCount} of {result.totalRows} rows.
+                  </p>
+                )}
                 <Button
                   variant="outline"
                   className="mt-4"
-                  onClick={() => { setFile(null); setStatus("idle"); }}
+                  onClick={() => { setFile(null); setStatus("idle"); setResult(null); }}
                 >
                   Try Again
                 </Button>
@@ -128,8 +170,8 @@ const ImportCourses = () => {
           {/* Submit Button */}
           {status === "idle" && (
             <div className="flex justify-end">
-              <Button onClick={handleSubmit} disabled={!file}>
-                Import Courses
+              <Button onClick={handleSubmit} disabled={!file || isUploading}>
+                {isUploading ? "Importing..." : "Import Courses"}
               </Button>
             </div>
           )}

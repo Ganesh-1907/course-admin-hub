@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Search, Calendar, Edit, Trash2, ChevronLeft, ChevronRight, Filter } from "lucide-react";
+import { Search, Edit, Trash2, ChevronLeft, ChevronRight, Filter } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,50 +17,72 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { getAllCourses, deleteCourse } from "@/services/api";
 
 const serviceTypes = ["All Types", "Agile", "Service", "SAFe", "Project", "Quality", "Business", "Generative AI"];
 
-const mockCourses = [
-  { id: "CRS001", name: "Agile Fundamentals", mentor: "John Smith", price: 499, serviceType: "Agile", startDate: "2024-03-01", endDate: "2024-03-15" },
-  { id: "CRS002", name: "SAFe Practitioner", mentor: "Sarah Johnson", price: 899, serviceType: "SAFe", startDate: "2024-03-10", endDate: "2024-03-25" },
-  { id: "CRS003", name: "Project Management Pro", mentor: "Mike Wilson", price: 699, serviceType: "Project", startDate: "2024-03-15", endDate: "2024-04-01" },
-  { id: "CRS004", name: "Service Excellence", mentor: "Emily Brown", price: 599, serviceType: "Service", startDate: "2024-03-20", endDate: "2024-04-05" },
-  { id: "CRS005", name: "Quality Assurance Master", mentor: "David Lee", price: 799, serviceType: "Quality", startDate: "2024-04-01", endDate: "2024-04-20" },
-  { id: "CRS006", name: "Generative AI Basics", mentor: "Lisa Chen", price: 1099, serviceType: "Generative AI", startDate: "2024-04-10", endDate: "2024-04-30" },
-  { id: "CRS007", name: "Business Analysis Essentials", mentor: "Tom Harris", price: 649, serviceType: "Business", startDate: "2024-04-15", endDate: "2024-05-01" },
-];
-
 const CourseListing = () => {
   const navigate = useNavigate();
-  const [filters, setFilters] = useState({
-    startDate: "",
-    endDate: "",
-    courseName: "",
-    mentorName: "",
-    courseType: "All Types",
-  });
+  const [courses, setCourses] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
-
-  const filteredCourses = mockCourses.filter((course) => {
-    if (filters.courseName && !course.name.toLowerCase().includes(filters.courseName.toLowerCase())) return false;
-    if (filters.mentorName && !course.mentor.toLowerCase().includes(filters.mentorName.toLowerCase())) return false;
-    if (filters.startDate && course.startDate < filters.startDate) return false;
-    if (filters.endDate && course.endDate > filters.endDate) return false;
-    if (filters.courseType !== "All Types" && course.serviceType !== filters.courseType) return false;
-    return true;
+  const [totalPages, setTotalPages] = useState(1);
+  const [filters, setFilters] = useState({
+    search: "",
+    serviceType: "All Types",
   });
+  const itemsPerPage = 10;
 
-  const totalPages = Math.ceil(filteredCourses.length / itemsPerPage);
-  const paginatedCourses = filteredCourses.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  // Fetch courses
+  useEffect(() => {
+    const fetchCourses = async () => {
+      setLoading(true);
+      try {
+        const response = await getAllCourses(currentPage, itemsPerPage, {
+          search: filters.search || undefined,
+          serviceType: filters.serviceType !== "All Types" ? filters.serviceType : undefined,
+        });
 
-  const handleDelete = () => {
-    toast.success("Course deleted successfully!");
-    setDeleteId(null);
+        if (response.success) {
+          setCourses(response.data.courses || []);
+          setTotalPages(response.data.totalPages || 1);
+        }
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to fetch courses");
+        setCourses([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCourses();
+  }, [currentPage, filters]);
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+
+    try {
+      const response = await deleteCourse(deleteId);
+      if (response.success) {
+        toast.success("Course deleted successfully!");
+        setCourses(courses.filter(c => c._id !== deleteId));
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to delete course");
+    } finally {
+      setDeleteId(null);
+    }
+  };
+
+  const handleSearchChange = (value: string) => {
+    setFilters({ ...filters, search: value });
+    setCurrentPage(1);
+  };
+
+  const handleFilterChange = (value: string) => {
+    setFilters({ ...filters, serviceType: value });
+    setCurrentPage(1);
   };
 
   return (
@@ -76,48 +98,19 @@ const CourseListing = () => {
 
         {/* Filters */}
         <div className="admin-card p-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                type="date"
-                placeholder="Start Date"
-                value={filters.startDate}
-                onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
-                className="pl-10"
-              />
-            </div>
-            <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                type="date"
-                placeholder="End Date"
-                value={filters.endDate}
-                onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
-                className="pl-10"
-              />
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 placeholder="Search course name..."
-                value={filters.courseName}
-                onChange={(e) => setFilters({ ...filters, courseName: e.target.value })}
-                className="pl-10"
-              />
-            </div>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search mentor..."
-                value={filters.mentorName}
-                onChange={(e) => setFilters({ ...filters, mentorName: e.target.value })}
+                value={filters.search}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="pl-10"
               />
             </div>
             <Select
-              value={filters.courseType}
-              onValueChange={(value) => setFilters({ ...filters, courseType: value })}
+              value={filters.serviceType}
+              onValueChange={handleFilterChange}
             >
               <SelectTrigger>
                 <Filter className="w-4 h-4 mr-2 text-muted-foreground" />
@@ -134,65 +127,84 @@ const CourseListing = () => {
 
         {/* Table */}
         <div className="table-container overflow-x-auto">
-          <table className="w-full min-w-[700px]">
-            <thead>
-              <tr>
-                <th className="table-header-cell">Course ID</th>
-                <th className="table-header-cell">Course Name</th>
-                <th className="table-header-cell">Mentor</th>
-                <th className="table-header-cell">Course Type</th>
-                <th className="table-header-cell">Price</th>
-                <th className="table-header-cell text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedCourses.map((course) => (
-                <tr key={course.id} className="border-b border-border hover:bg-muted/50 transition-colors">
-                  <td className="px-4 py-3">
-                    <Link
-                      to={`/courses/${course.id}`}
-                      className="text-primary font-medium hover:underline"
-                    >
-                      {course.id}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 font-medium text-foreground">{course.name}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{course.mentor}</td>
-                  <td className="px-4 py-3">
-                    <Badge variant="secondary">{course.serviceType}</Badge>
-                  </td>
-                  <td className="px-4 py-3 font-medium text-foreground">${course.price}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => navigate(`/courses/${course.id}/edit`)}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => setDeleteId(course.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </td>
+          {loading ? (
+            <div className="flex justify-center items-center py-8">
+              <div className="text-muted-foreground">Loading courses...</div>
+            </div>
+          ) : courses.length === 0 ? (
+            <div className="flex justify-center items-center py-8">
+              <div className="text-muted-foreground">No courses found</div>
+            </div>
+          ) : (
+            <table className="w-full min-w-[700px]">
+              <thead>
+                <tr>
+                  <th className="table-header-cell font-bold text-black">Course ID</th>
+                  <th className="table-header-cell font-bold text-black">Course Name</th>
+                  <th className="table-header-cell font-bold text-black">Type</th>
+                  <th className="table-header-cell font-bold text-black">Fee</th>
+                  <th className="table-header-cell font-bold text-black">Duration</th>
+                  <th className="table-header-cell font-bold text-black">Status</th>
+                  <th className="table-header-cell text-right font-bold text-black">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {courses.map((course) => {
+                  const courseId = course._id || course.id || course.courseId;
+                  return (
+                  <tr key={courseId} className="border-b border-border hover:bg-muted/50 transition-colors">
+                    <td className="px-4 py-3 font-medium text-foreground">
+                      <Link
+                        to={`/courses/${courseId}`}
+                        className="text-primary hover:underline"
+                      >
+                        {course.courseId || courseId}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 text-foreground">{course.courseName}</td>
+                    <td className="px-4 py-3">
+                      <span className="text-foreground">{course.serviceType}</span>
+                    </td>
+                    <td className="px-4 py-3 text-foreground">${course.finalPrice || course.price}</td>
+                    <td className="px-4 py-3 text-foreground">{course.duration} days</td>
+                    <td className="px-4 py-3">
+                      <span className={course.isActive ? "font-semibold text-green-600" : "font-semibold text-red-600"}>
+                        {course.isActive ? "Active" : "Inactive"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-blue-600 hover:text-blue-700"
+                          onClick={() => navigate(`/courses/${courseId}/edit`)}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-blue-600 hover:text-blue-700"
+                          onClick={() => setDeleteId(courseId)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
 
         {/* Pagination */}
-        {totalPages > 1 && (
+        {!loading && courses.length > 0 && totalPages > 1 && (
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
-              {Math.min(currentPage * itemsPerPage, filteredCourses.length)} of{" "}
-              {filteredCourses.length} courses
+              Page {currentPage} of {totalPages}
             </p>
             <div className="flex gap-2">
               <Button
@@ -203,16 +215,19 @@ const CourseListing = () => {
               >
                 <ChevronLeft className="w-4 h-4" />
               </Button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                <Button
-                  key={page}
-                  variant={currentPage === page ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setCurrentPage(page)}
-                >
-                  {page}
-                </Button>
-              ))}
+              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                const page = i + 1;
+                return (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(page)}
+                  >
+                    {page}
+                  </Button>
+                );
+              })}
               <Button
                 variant="outline"
                 size="sm"

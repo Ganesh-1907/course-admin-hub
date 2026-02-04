@@ -1,55 +1,74 @@
-import { useState } from "react";
-import { Search, Calendar, Eye, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, Calendar, Eye, ChevronLeft, ChevronRight, Loader } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-
-interface Registration {
-  id: string;
-  participantName: string;
-  mobile: string;
-  email: string;
-  courseName: string;
-  paymentId: string;
-  amount: number;
-  status: "Paid" | "Pending";
-  registrationDate: string;
-}
-
-const mockRegistrations: Registration[] = [
-  { id: "REG001", participantName: "Alice Johnson", mobile: "+1 234-567-8901", email: "alice@example.com", courseName: "Agile Fundamentals", paymentId: "PAY_001234", amount: 399.20, status: "Paid", registrationDate: "2024-02-28" },
-  { id: "REG002", participantName: "Bob Williams", mobile: "+1 234-567-8902", email: "bob@example.com", courseName: "SAFe Practitioner", paymentId: "PAY_001235", amount: 899, status: "Paid", registrationDate: "2024-02-27" },
-  { id: "REG003", participantName: "Carol Davis", mobile: "+1 234-567-8903", email: "carol@example.com", courseName: "Project Management Pro", paymentId: "PAY_001236", amount: 699, status: "Pending", registrationDate: "2024-02-26" },
-  { id: "REG004", participantName: "Daniel Miller", mobile: "+1 234-567-8904", email: "daniel@example.com", courseName: "Generative AI Basics", paymentId: "PAY_001237", amount: 1099, status: "Paid", registrationDate: "2024-02-25" },
-  { id: "REG005", participantName: "Eva Martinez", mobile: "+1 234-567-8905", email: "eva@example.com", courseName: "Quality Assurance Master", paymentId: "PAY_001238", amount: 799, status: "Pending", registrationDate: "2024-02-24" },
-];
+import { toast } from "sonner";
+import { getAllRegistrations, getRegistrationDetail } from "@/services/api";
 
 const Registrations = () => {
+  const [registrations, setRegistrations] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedRegistration, setSelectedRegistration] = useState<any | null>(null);
+  const [showDetail, setShowDetail] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [filters, setFilters] = useState({
     startDate: "",
     endDate: "",
     courseName: "",
     participantName: "",
+    status: "",
   });
-  const [selectedRegistration, setSelectedRegistration] = useState<Registration | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const itemsPerPage = 10;
 
-  const filteredRegistrations = mockRegistrations.filter((reg) => {
-    if (filters.courseName && !reg.courseName.toLowerCase().includes(filters.courseName.toLowerCase())) return false;
-    if (filters.participantName && !reg.participantName.toLowerCase().includes(filters.participantName.toLowerCase())) return false;
-    if (filters.startDate && reg.registrationDate < filters.startDate) return false;
-    if (filters.endDate && reg.registrationDate > filters.endDate) return false;
-    return true;
-  });
+  // Fetch registrations
+  useEffect(() => {
+    const fetchRegistrations = async () => {
+      setLoading(true);
+      try {
+        const response = await getAllRegistrations(currentPage, itemsPerPage, {
+          search: filters.participantName || filters.courseName || undefined,
+          status: filters.status || undefined,
+        });
 
-  const totalPages = Math.ceil(filteredRegistrations.length / itemsPerPage);
-  const paginatedRegistrations = filteredRegistrations.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+        if (response.success) {
+          setRegistrations(response.data.registrations || []);
+          setTotalPages(response.data.pagination?.pages || 1);
+        } else {
+          toast.error(response.message || "Failed to fetch registrations");
+        }
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to fetch registrations");
+        setRegistrations([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRegistrations();
+  }, [currentPage, filters]);
+
+
+  const handleViewDetail = async (registration: any) => {
+    try {
+      const response = await getRegistrationDetail(registration._id);
+      if (response.success && response.data) {
+        setSelectedRegistration(response.data);
+        setShowDetail(true);
+      } else {
+        toast.error(response.message || "Failed to load registration details");
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to load registration details");
+    }
+  };
+
+  const handleFilterChange = (field: string, value: string) => {
+    setFilters({ ...filters, [field]: value });
+    setCurrentPage(1);
+  };
 
   return (
     <AdminLayout>
@@ -61,14 +80,14 @@ const Registrations = () => {
 
         {/* Filters */}
         <div className="admin-card p-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="relative">
               <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 type="date"
                 placeholder="Start Date"
                 value={filters.startDate}
-                onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
+                onChange={(e) => handleFilterChange("startDate", e.target.value)}
                 className="pl-10"
               />
             </div>
@@ -78,7 +97,7 @@ const Registrations = () => {
                 type="date"
                 placeholder="End Date"
                 value={filters.endDate}
-                onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
+                onChange={(e) => handleFilterChange("endDate", e.target.value)}
                 className="pl-10"
               />
             </div>
@@ -87,7 +106,7 @@ const Registrations = () => {
               <Input
                 placeholder="Search course..."
                 value={filters.courseName}
-                onChange={(e) => setFilters({ ...filters, courseName: e.target.value })}
+                onChange={(e) => handleFilterChange("courseName", e.target.value)}
                 className="pl-10"
               />
             </div>
@@ -96,8 +115,15 @@ const Registrations = () => {
               <Input
                 placeholder="Search participant..."
                 value={filters.participantName}
-                onChange={(e) => setFilters({ ...filters, participantName: e.target.value })}
+                onChange={(e) => handleFilterChange("participantName", e.target.value)}
                 className="pl-10"
+              />
+            </div>
+            <div className="relative">
+              <Input
+                placeholder="Filter by status..."
+                value={filters.status}
+                onChange={(e) => handleFilterChange("status", e.target.value)}
               />
             </div>
           </div>
@@ -105,55 +131,72 @@ const Registrations = () => {
 
         {/* Table */}
         <div className="table-container overflow-x-auto">
-          <table className="w-full min-w-[800px]">
-            <thead>
-              <tr>
-                <th className="table-header-cell">Participant</th>
-                <th className="table-header-cell">Mobile</th>
-                <th className="table-header-cell">Email</th>
-                <th className="table-header-cell">Course</th>
-                <th className="table-header-cell">Payment ID</th>
-                <th className="table-header-cell">Amount</th>
-                <th className="table-header-cell">Status</th>
-                <th className="table-header-cell text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedRegistrations.map((reg) => (
-                <tr key={reg.id} className="border-b border-border hover:bg-muted/50 transition-colors">
-                  <td className="px-4 py-3 font-medium text-foreground">{reg.participantName}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{reg.mobile}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{reg.email}</td>
-                  <td className="px-4 py-3 text-foreground">{reg.courseName}</td>
-                  <td className="px-4 py-3 text-muted-foreground font-mono text-sm">{reg.paymentId}</td>
-                  <td className="px-4 py-3 font-medium text-foreground">${reg.amount}</td>
-                  <td className="px-4 py-3">
-                    <Badge variant={reg.status === "Paid" ? "default" : "secondary"}>
-                      {reg.status}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setSelectedRegistration(reg)}
-                    >
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                  </td>
+          {loading ? (
+            <div className="flex justify-center items-center py-8">
+              <Loader className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : registrations.length === 0 ? (
+            <div className="flex justify-center items-center py-8">
+              <div className="text-muted-foreground">No registrations found</div>
+            </div>
+          ) : (
+            <table className="w-full min-w-[1000px]">
+              <thead>
+                <tr>
+                  <th className="table-header-cell font-bold text-black">Participant</th>
+                  <th className="table-header-cell font-bold text-black">Email</th>
+                  <th className="table-header-cell font-bold text-black">Mobile</th>
+                  <th className="table-header-cell font-bold text-black">Course</th>
+                  <th className="table-header-cell font-bold text-black">Amount</th>
+                  <th className="table-header-cell font-bold text-black">Status</th>
+                  <th className="table-header-cell font-bold text-black">Registered Date</th>
+                  <th className="table-header-cell text-right font-bold text-black">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {registrations.map((reg) => (
+                  <tr key={reg._id} className="border-b border-border hover:bg-muted/50 transition-colors">
+                    <td className="px-4 py-3 text-foreground">{reg.participantName || "N/A"}</td>
+                    <td className="px-4 py-3 text-foreground">{reg.email || "N/A"}</td>
+                    <td className="px-4 py-3 text-foreground">{reg.mobile || "N/A"}</td>
+                    <td className="px-4 py-3 text-foreground">{reg.courseName || "N/A"}</td>
+                    <td className="px-4 py-3 text-foreground">${reg.amount || 0}</td>
+                    <td className="px-4 py-3">
+                      <span className={
+                        reg.status === "Completed" ? "font-semibold text-green-600" :
+                        reg.status === "Cancelled" ? "font-semibold text-red-600" :
+                        "font-semibold text-orange-600"
+                      }>
+                        {reg.status || "Pending"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-foreground">
+                      {reg.registrationDate ? new Date(reg.registrationDate).toLocaleDateString() : "N/A"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-blue-600 hover:text-blue-700"
+                          onClick={() => handleViewDetail(reg)}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
 
         {/* Pagination */}
-        {totalPages > 1 && (
+        {!loading && registrations.length > 0 && totalPages > 1 && (
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
-              {Math.min(currentPage * itemsPerPage, filteredRegistrations.length)} of{" "}
-              {filteredRegistrations.length} registrations
+              Page {currentPage} of {totalPages}
             </p>
             <div className="flex gap-2">
               <Button
@@ -164,16 +207,19 @@ const Registrations = () => {
               >
                 <ChevronLeft className="w-4 h-4" />
               </Button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                <Button
-                  key={page}
-                  variant={currentPage === page ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setCurrentPage(page)}
-                >
-                  {page}
-                </Button>
-              ))}
+              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                const page = i + 1;
+                return (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(page)}
+                  >
+                    {page}
+                  </Button>
+                );
+              })}
               <Button
                 variant="outline"
                 size="sm"
@@ -187,60 +233,54 @@ const Registrations = () => {
         )}
       </div>
 
-      {/* Registration Details Modal */}
-      <Dialog open={!!selectedRegistration} onOpenChange={() => setSelectedRegistration(null)}>
-        <DialogContent className="max-w-lg bg-card">
+      {/* Detail Modal */}
+      <Dialog open={showDetail} onOpenChange={setShowDetail}>
+        <DialogContent className="bg-card max-w-2xl">
           <DialogHeader>
             <DialogTitle>Registration Details</DialogTitle>
           </DialogHeader>
           {selectedRegistration && (
-            <div className="space-y-6">
-              {/* Personal Info */}
-              <div>
-                <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Personal Information</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Name</p>
-                    <p className="font-medium text-foreground">{selectedRegistration.participantName}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Mobile</p>
-                    <p className="font-medium text-foreground">{selectedRegistration.mobile}</p>
-                  </div>
-                  <div className="col-span-2">
-                    <p className="text-sm text-muted-foreground">Email</p>
-                    <p className="font-medium text-foreground">{selectedRegistration.email}</p>
-                  </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Participant Name</p>
+                  <p className="font-semibold">{selectedRegistration.participantName || "N/A"}</p>
                 </div>
-              </div>
-
-              {/* Course Info */}
-              <div>
-                <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Course Information</h4>
-                <div className="bg-secondary/50 rounded-lg p-4">
-                  <p className="font-semibold text-foreground">{selectedRegistration.courseName}</p>
-                  <p className="text-sm text-muted-foreground mt-1">Registered on {selectedRegistration.registrationDate}</p>
+                <div>
+                  <p className="text-sm text-muted-foreground">Email</p>
+                  <p className="font-semibold">{selectedRegistration.email || "N/A"}</p>
                 </div>
-              </div>
-
-              {/* Payment Info */}
-              <div>
-                <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Payment Information</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Payment ID</p>
-                    <p className="font-mono text-sm text-foreground">{selectedRegistration.paymentId}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Amount</p>
-                    <p className="text-xl font-bold text-foreground">${selectedRegistration.amount}</p>
-                  </div>
-                  <div className="col-span-2">
-                    <p className="text-sm text-muted-foreground">Status</p>
-                    <Badge variant={selectedRegistration.status === "Paid" ? "default" : "secondary"} className="mt-1">
-                      {selectedRegistration.status}
-                    </Badge>
-                  </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Mobile</p>
+                  <p className="font-semibold">{selectedRegistration.mobile || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Course Name</p>
+                  <p className="font-semibold">{selectedRegistration.courseName || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Amount</p>
+                  <p className="font-semibold">${selectedRegistration.amount || 0}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Status</p>
+                  <p className={
+                    selectedRegistration.status === "Completed" ? "font-semibold text-green-600" :
+                    selectedRegistration.status === "Cancelled" ? "font-semibold text-red-600" :
+                    "font-semibold text-orange-600"
+                  }>
+                    {selectedRegistration.status || "Pending"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Registration Date</p>
+                  <p className="font-semibold">
+                    {selectedRegistration.registrationDate ? new Date(selectedRegistration.registrationDate).toLocaleDateString() : "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Payment ID</p>
+                  <p className="font-semibold">{selectedRegistration.paymentId || "N/A"}</p>
                 </div>
               </div>
             </div>

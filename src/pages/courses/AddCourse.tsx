@@ -1,78 +1,136 @@
-import { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Upload, X, FileText, Calendar } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { Calendar } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import { createCourse, getCourseById, updateCourse } from "@/services/api";
 
 const serviceTypes = ["Agile", "Service", "SAFe", "Project", "Quality", "Business", "Generative AI"];
+const difficultyLevels = ["Beginner", "Intermediate", "Advanced"];
 
 const AddCourse = () => {
   const navigate = useNavigate();
-  const imageInputRef = useRef<HTMLInputElement>(null);
-  const brochureInputRef = useRef<HTMLInputElement>(null);
+  const { id } = useParams();
+  const isEditMode = Boolean(id);
+  const [loading, setLoading] = useState(false);
   
   const [formData, setFormData] = useState({
-    name: "",
+    title: "",
     description: "",
     mentor: "",
+    serviceType: "",
+    difficultyLevel: "",
+    isActive: true,
     startDate: "",
     endDate: "",
-    price: "",
+    duration: "",
+    fee: "",
     discount: "",
-    serviceType: "",
   });
   
-  const [courseImage, setCourseImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [brochure, setBrochure] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const finalPrice = formData.price && formData.discount
-    ? (parseFloat(formData.price) - (parseFloat(formData.price) * parseFloat(formData.discount) / 100)).toFixed(2)
-    : formData.price || "0.00";
+  useEffect(() => {
+    const fetchCourse = async () => {
+      if (!id) return;
+      setLoading(true);
+      try {
+        const response = await getCourseById(id);
+        if (response.success && response.data) {
+          const course = response.data;
+          setFormData({
+            title: course.courseName || "",
+            description: course.description || "",
+            mentor: course.mentor || "",
+            serviceType: course.serviceType || "",
+            difficultyLevel: course.difficultyLevel || "",
+            isActive: course.isActive ?? true,
+            startDate: course.startDate ? new Date(course.startDate).toISOString().slice(0, 10) : "",
+            endDate: course.endDate ? new Date(course.endDate).toISOString().slice(0, 10) : "",
+            duration: course.duration ? String(course.duration) : "",
+            fee: course.price ? String(course.price) : "",
+            discount: course.discountPercentage ? String(course.discountPercentage) : "",
+          });
+        } else {
+          toast.error(response.message || "Failed to load course");
+          navigate("/courses");
+        }
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to load course");
+        navigate("/courses");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setCourseImage(file);
-      const reader = new FileReader();
-      reader.onloadend = () => setImagePreview(reader.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
+    fetchCourse();
+  }, [id, navigate]);
 
-  const handleBrochureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && file.type === "application/pdf") {
-      setBrochure(file);
-    } else {
-      toast.error("Please upload a PDF file only");
-    }
-  };
+  const finalPrice = formData.fee && formData.discount
+    ? (parseFloat(formData.fee) - (parseFloat(formData.fee) * parseFloat(formData.discount) / 100)).toFixed(2)
+    : formData.fee || "0.00";
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-    if (!formData.name) newErrors.name = "Course name is required";
+    if (!formData.title) newErrors.title = "Course name is required";
     if (!formData.description) newErrors.description = "Description is required";
     if (!formData.mentor) newErrors.mentor = "Mentor name is required";
     if (!formData.startDate) newErrors.startDate = "Start date is required";
     if (!formData.endDate) newErrors.endDate = "End date is required";
-    if (!formData.price) newErrors.price = "Price is required";
+    if (!formData.duration) newErrors.duration = "Duration is required";
+    if (!formData.fee) newErrors.fee = "Fee is required";
     if (!formData.serviceType) newErrors.serviceType = "Service type is required";
+    if (!formData.difficultyLevel) newErrors.difficultyLevel = "Difficulty level is required";
+    
+    // Validate date range
+    if (formData.startDate && formData.endDate && formData.startDate >= formData.endDate) {
+      newErrors.endDate = "End date must be after start date";
+    }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateForm()) {
-      toast.success("Course saved successfully!");
-      navigate("/courses");
+    if (!validateForm()) return;
+
+    setLoading(true);
+    try {
+      const payload = {
+        courseName: formData.title,
+        description: formData.description,
+        mentor: formData.mentor,
+        serviceType: formData.serviceType,
+        difficultyLevel: formData.difficultyLevel,
+        isActive: formData.isActive,
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        duration: parseInt(formData.duration),
+        price: parseFloat(formData.fee),
+        discountPercentage: formData.discount ? parseFloat(formData.discount) : 0,
+      };
+
+      const response = isEditMode && id
+        ? await updateCourse(id, payload)
+        : await createCourse(payload);
+
+      if (response.success) {
+        toast.success(isEditMode ? "Course updated successfully!" : "Course created successfully!");
+        navigate("/courses");
+      } else {
+        toast.error(response.message || "Failed to create course");
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to create course");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -80,57 +138,24 @@ const AddCourse = () => {
     <AdminLayout>
       <div className="max-w-4xl mx-auto">
         <div className="mb-6">
-          <h1 className="page-title">Add New Course</h1>
-          <p className="page-subtitle">Create a new course for your students</p>
+          <h1 className="page-title">{isEditMode ? "Edit Course" : "Add New Course"}</h1>
+          <p className="page-subtitle">
+            {isEditMode ? "Update course details" : "Create a new course for your students"}
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="admin-card p-6 space-y-6">
-          {/* Image Upload */}
-          <div>
-            <Label className="form-label">Course Image</Label>
-            <div className="mt-2">
-              {imagePreview ? (
-                <div className="relative w-full h-48 rounded-lg overflow-hidden border border-border">
-                  <img src={imagePreview} alt="Course preview" className="w-full h-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => { setCourseImage(null); setImagePreview(null); }}
-                    className="absolute top-2 right-2 p-1 bg-destructive rounded-full text-destructive-foreground hover:bg-destructive/90 transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => imageInputRef.current?.click()}
-                  className="w-full h-48 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-2 hover:border-primary hover:bg-secondary/30 transition-all"
-                >
-                  <Upload className="w-8 h-8 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Click to upload course image</span>
-                </button>
-              )}
-              <input
-                ref={imageInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="hidden"
-              />
-            </div>
-          </div>
-
           {/* Basic Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <Label htmlFor="name" className="form-label">Course Name *</Label>
+              <Label htmlFor="title" className="form-label">Course Name *</Label>
               <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                id="title"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder="Enter course name"
               />
-              {errors.name && <p className="text-destructive text-sm mt-1">{errors.name}</p>}
+              {errors.title && <p className="text-destructive text-sm mt-1">{errors.title}</p>}
             </div>
 
             <div>
@@ -155,6 +180,56 @@ const AddCourse = () => {
               rows={4}
             />
             {errors.description && <p className="text-destructive text-sm mt-1">{errors.description}</p>}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <Label htmlFor="serviceType" className="form-label">Service Type *</Label>
+              <Select
+                value={formData.serviceType}
+                onValueChange={(value) => setFormData({ ...formData, serviceType: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select service type" />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border">
+                  {serviceTypes.map((type) => (
+                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.serviceType && <p className="text-destructive text-sm mt-1">{errors.serviceType}</p>}
+            </div>
+
+            <div>
+              <Label htmlFor="difficultyLevel" className="form-label">Difficulty Level *</Label>
+              <Select
+                value={formData.difficultyLevel}
+                onValueChange={(value) => setFormData({ ...formData, difficultyLevel: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select difficulty level" />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border">
+                  {difficultyLevels.map((level) => (
+                    <SelectItem key={level} value={level}>{level}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.difficultyLevel && <p className="text-destructive text-sm mt-1">{errors.difficultyLevel}</p>}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border border-border p-4">
+            <div>
+              <Label htmlFor="isActive" className="form-label">Active Course</Label>
+              <p className="text-sm text-muted-foreground">Toggle to activate or deactivate this course</p>
+            </div>
+            <Switch
+              id="isActive"
+              checked={formData.isActive}
+              onCheckedChange={(value) => setFormData({ ...formData, isActive: value })}
+            />
           </div>
 
           {/* Dates */}
@@ -190,20 +265,33 @@ const AddCourse = () => {
             </div>
           </div>
 
-          {/* Pricing */}
+          {/* Duration and Pricing */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
-              <Label htmlFor="price" className="form-label">Price ($) *</Label>
+              <Label htmlFor="duration" className="form-label">Duration (hours) *</Label>
               <Input
-                id="price"
+                id="duration"
+                type="number"
+                min="1"
+                value={formData.duration}
+                onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                placeholder="30"
+              />
+              {errors.duration && <p className="text-destructive text-sm mt-1">{errors.duration}</p>}
+            </div>
+
+            <div>
+              <Label htmlFor="fee" className="form-label">Fee ($) *</Label>
+              <Input
+                id="fee"
                 type="number"
                 min="0"
                 step="0.01"
-                value={formData.price}
-                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                value={formData.fee}
+                onChange={(e) => setFormData({ ...formData, fee: e.target.value })}
                 placeholder="0.00"
               />
-              {errors.price && <p className="text-destructive text-sm mt-1">{errors.price}</p>}
+              {errors.fee && <p className="text-destructive text-sm mt-1">{errors.fee}</p>}
             </div>
 
             <div>
@@ -218,75 +306,30 @@ const AddCourse = () => {
                 placeholder="0"
               />
             </div>
-
-            <div>
-              <Label className="form-label">Final Price ($)</Label>
-              <Input
-                value={`$${finalPrice}`}
-                readOnly
-                className="bg-secondary font-semibold"
-              />
-            </div>
           </div>
 
-          {/* Service Type */}
           <div>
-            <Label className="form-label">Service Type *</Label>
-            <Select value={formData.serviceType} onValueChange={(value) => setFormData({ ...formData, serviceType: value })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select service type" />
-              </SelectTrigger>
-              <SelectContent className="bg-card border-border">
-                {serviceTypes.map((type) => (
-                  <SelectItem key={type} value={type}>{type}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.serviceType && <p className="text-destructive text-sm mt-1">{errors.serviceType}</p>}
-          </div>
-
-          {/* Brochure Upload */}
-          <div>
-            <Label className="form-label">Brochure (PDF only)</Label>
-            <div className="mt-2">
-              {brochure ? (
-                <div className="flex items-center gap-3 p-3 bg-secondary rounded-lg">
-                  <FileText className="w-5 h-5 text-primary" />
-                  <span className="text-sm flex-1 truncate">{brochure.name}</span>
-                  <button
-                    type="button"
-                    onClick={() => setBrochure(null)}
-                    className="p-1 hover:bg-muted rounded transition-colors"
-                  >
-                    <X className="w-4 h-4 text-muted-foreground" />
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => brochureInputRef.current?.click()}
-                  className="w-full p-4 border-2 border-dashed border-border rounded-lg flex items-center justify-center gap-2 hover:border-primary hover:bg-secondary/30 transition-all"
-                >
-                  <Upload className="w-5 h-5 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Upload brochure PDF</span>
-                </button>
-              )}
-              <input
-                ref={brochureInputRef}
-                type="file"
-                accept=".pdf"
-                onChange={handleBrochureChange}
-                className="hidden"
-              />
-            </div>
+            <Label className="form-label">Final Price</Label>
+            <Input
+              value={`$${finalPrice}`}
+              readOnly
+              className="bg-secondary font-semibold"
+            />
           </div>
 
           {/* Actions */}
           <div className="flex justify-end gap-3 pt-4 border-t border-border">
-            <Button type="button" variant="outline" onClick={() => navigate("/courses")}>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => navigate("/courses")}
+              disabled={loading}
+            >
               Cancel
             </Button>
-            <Button type="submit">Save Course</Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? (isEditMode ? "Updating..." : "Creating...") : (isEditMode ? "Update Course" : "Create Course")}
+            </Button>
           </div>
         </form>
       </div>
