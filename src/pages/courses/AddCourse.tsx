@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Calendar as CalendarIcon, Clock } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Upload } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -67,6 +67,8 @@ const AddCourse = () => {
   });
   
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [brochureFile, setBrochureFile] = useState<File | null>(null);
+  const [existingBrochure, setExistingBrochure] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchCourse = async () => {
@@ -123,8 +125,12 @@ const AddCourse = () => {
             batchType: course.batchType || "",
             courseType: course.courseType || "",
             address: course.address || "",
+            address: course.address || "",
             countryPricing: cPricing
           });
+          if (course.brochure?.url) {
+            setExistingBrochure(course.brochure.url);
+          }
         } else {
           toast.error(response.message || "Failed to load course");
           navigate("/courses");
@@ -192,33 +198,42 @@ const AddCourse = () => {
     setLoading(true);
     try {
       const defaultPricing = formData.countryPricing.find(p => p.country === 'USA') || formData.countryPricing[0];
-
-      const payload = {
-        courseName: formData.title,
-        description: formData.description,
-        mentor: formData.mentor,
-        serviceType: formData.serviceType,
-        difficultyLevel: formData.difficultyLevel,
-        isActive: formData.isActive,
-        startDate: formData.startDate,
-        endDate: formData.endDate,
-        duration: parseInt(formData.duration),
-        language: formData.language,
-        startTime: formData.startTime,
-        endTime: formData.endTime,
-        batchType: formData.batchType,
-        courseType: formData.courseType,
-        address: formData.courseType === 'Offline' ? formData.address : undefined,
-        countryPricing: formData.countryPricing.map(p => ({
+      
+      const payload = new FormData();
+      payload.append('courseName', formData.title);
+      payload.append('description', formData.description);
+      payload.append('mentor', formData.mentor);
+      payload.append('serviceType', formData.serviceType);
+      payload.append('difficultyLevel', formData.difficultyLevel);
+      payload.append('isActive', String(formData.isActive));
+      payload.append('startDate', formData.startDate);
+      payload.append('endDate', formData.endDate);
+      payload.append('duration', formData.duration);
+      payload.append('language', formData.language);
+      payload.append('startTime', formData.startTime);
+      payload.append('endTime', formData.endTime);
+      payload.append('batchType', formData.batchType);
+      payload.append('courseType', formData.courseType);
+      
+      if (formData.courseType === 'Offline') {
+          payload.append('address', formData.address);
+      }
+      
+      const pricingData = formData.countryPricing.map(p => ({
             country: p.country,
             currency: p.currency,
             price: parseFloat(p.fee) || 0,
             discountPercentage: parseFloat(p.discount) || 0,
             finalPrice: parseFloat(p.price) || 0
-        })),
-        price: parseFloat(defaultPricing.fee) || 0,
-        discountPercentage: parseFloat(defaultPricing.discount) || 0,
-      };
+      }));
+      
+      payload.append('countryPricing', JSON.stringify(pricingData));
+      payload.append('price', String(parseFloat(defaultPricing.fee) || 0));
+      payload.append('discountPercentage', String(parseFloat(defaultPricing.discount) || 0));
+
+      if (brochureFile) {
+        payload.append('brochure', brochureFile);
+      }
 
       const response = isEditMode && id
         ? await updateCourse(id, payload)
@@ -474,24 +489,51 @@ const AddCourse = () => {
                 </div>
             </div>
 
-            {/* Row 6: Status & Address */}
-             <div className="flex flex-row items-center justify-between rounded-lg border border-border p-4 bg-card/50">
-                <div className="space-y-0.5">
-                    <Label htmlFor="isActive" className="text-base font-medium">Course Status</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Enable this to make the course visible to students and allow new enrollments.
-                    </p>
-                </div>
-                <div className="flex items-center gap-2">
-                    <Switch
-                        id="isActive"
-                        checked={formData.isActive}
-                        onCheckedChange={(value) => setFormData({ ...formData, isActive: value })}
+            {/* Row 6: Status & Brochure */}
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 {/* Status Switch */}
+                 <div className="flex flex-row items-center justify-between rounded-lg border border-border p-4 bg-card/50 h-full">
+                    <div className="space-y-0.5">
+                        <Label htmlFor="isActive" className="text-base font-medium">Course Status</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Make course visible to students.
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Switch
+                            id="isActive"
+                            checked={formData.isActive}
+                            onCheckedChange={(value) => setFormData({ ...formData, isActive: value })}
+                        />
+                        <Label htmlFor="isActive" className="cursor-pointer font-medium min-w-[3.5rem] text-right">
+                            {formData.isActive ? "Active" : "Inactive"}
+                        </Label>
+                    </div>
+                 </div>
+
+                 {/* Brochure Upload */}
+                 <div className="flex flex-col justify-center rounded-lg border border-border p-4 bg-card/50 h-full">
+                    <div className="flex items-center gap-2 mb-2">
+                        <Upload className="w-4 h-4 text-muted-foreground" />
+                        <Label htmlFor="brochure" className="text-base font-medium">Brochure</Label>
+                    </div>
+                    <Input
+                        id="brochure"
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        className="cursor-pointer file:cursor-pointer file:text-primary file:font-medium"
+                        onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                                setBrochureFile(e.target.files[0]);
+                            }
+                        }}
                     />
-                    <Label htmlFor="isActive" className="cursor-pointer font-medium min-w-[3.5rem] text-right">
-                        {formData.isActive ? "Active" : "Inactive"}
-                    </Label>
-                </div>
+                    {existingBrochure && (
+                        <p className="text-sm text-muted-foreground mt-2">
+                            Current: <a href={existingBrochure} target="_blank" rel="noreferrer" className="text-primary hover:underline font-medium">View Brochure</a>
+                        </p>
+                    )}
+                 </div>
              </div>
 
 

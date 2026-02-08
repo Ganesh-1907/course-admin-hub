@@ -85,6 +85,7 @@ const ImportCourses = () => {
                   <li>Times: Start Time, End Time (Format: HH:MM)</li>
                   <li>Details: Language, Batch Type, Course Type, Address (if Offline)</li>
                   <li>Pricing: Fee (USA), Discount (USA), Fee (Europe), Discount (Europe), etc.</li>
+                  <li>Brochure: Public Drive URL (must be publicly accessible)</li>
                 </ul>
                 <div className="mt-3">
                   <a

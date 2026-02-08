@@ -38,12 +38,19 @@ const apiRequest = async (
     'Content-Type': 'application/json',
   };
 
+  // If body is FormData, let browser set Content-Type with boundary
+  if (body instanceof FormData) {
+    // @ts-ignore
+    delete headers['Content-Type'];
+  }
+
   // Add auth token if required
   if (requiresAuth) {
     const token = getAuthToken();
     if (!token) {
       throw new Error('No authentication token found');
     }
+    // @ts-ignore
     headers['Authorization'] = `Bearer ${token}`;
   }
 
@@ -53,7 +60,11 @@ const apiRequest = async (
   };
 
   if (body && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
-    options.body = JSON.stringify(body);
+    if (body instanceof FormData) {
+      options.body = body;
+    } else {
+      options.body = JSON.stringify(body);
+    }
   }
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, options);

@@ -89,9 +89,16 @@ const CourseDetails = () => {
             <ArrowLeft className="w-4 h-4" />
             Back to Courses
             </Button>
-            <Button onClick={() => navigate(`/courses/edit/${id}`)} className="gap-2">
-                Edit Course
-            </Button>
+            <div className="flex gap-2">
+                {course.brochure?.url && (
+                    <Button variant="outline" onClick={() => window.open(course.brochure.url, "_blank")} className="gap-2">
+                        View Brochure
+                    </Button>
+                )}
+                <Button onClick={() => navigate(`/courses/edit/${id}`)} className="gap-2">
+                    Edit Course
+                </Button>
+            </div>
         </div>
 
         <div className="admin-card overflow-hidden">
