@@ -80,9 +80,11 @@ const ImportCourses = () => {
                 <ul className="list-disc list-inside space-y-1 text-muted-foreground">
                   <li>File must be in .xls or .xlsx format</li>
                   <li>First row should contain column headers</li>
-                  <li>Required columns: Course Name, Mentor Name, Description, Service Type, Start Date, End Date, Duration, Fee, Discount, Final Price, Level</li>
-                  <li>Service Type values: Agile, Service, SAFe, Project, Quality, Business, Generative AI</li>
-                  <li>Level values: Beginner, Intermediate, Advanced</li>
+                  <li>Required: Course Name, Mentor, Description, Service Type, Fee, Discount</li>
+                  <li>Dates: Start Date, End Date (Format: YYYY-MM-DD)</li>
+                  <li>Times: Start Time, End Time (Format: HH:MM)</li>
+                  <li>Details: Language, Batch Type, Course Type, Address (if Offline)</li>
+                  <li>Pricing: Fee (USA), Discount (USA), Fee (Europe), Discount (Europe), etc.</li>
                 </ul>
                 <div className="mt-3">
                   <a
@@ -90,7 +92,7 @@ const ImportCourses = () => {
                     download
                     className="text-primary hover:underline font-medium"
                   >
-                    Download sample template (Excel)
+                    Download updated sample template (Excel)
                   </a>
                 </div>
               </div>

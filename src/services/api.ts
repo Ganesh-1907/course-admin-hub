@@ -75,12 +75,12 @@ export const adminLogin = async (email: string, password: string) => {
     { email, password },
     false
   );
-  
+
   if (response.data?.token) {
     setAuthToken(response.data.token);
     setUserData(response.data.admin);
   }
-  
+
   return response;
 };
 

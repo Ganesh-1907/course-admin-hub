@@ -82,131 +82,137 @@ const CourseDetails = () => {
 
   return (
     <AdminLayout>
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Back Button */}
-        <Button variant="ghost" onClick={() => navigate("/courses")} className="gap-2">
-          <ArrowLeft className="w-4 h-4" />
-          Back to Courses
-        </Button>
+      <div className="max-w-5xl mx-auto space-y-6">
+        {/* Navigation */}
+        <div className="flex items-center justify-between">
+            <Button variant="ghost" onClick={() => navigate("/courses")} className="gap-2 pl-0 hover:bg-transparent hover:text-primary">
+            <ArrowLeft className="w-4 h-4" />
+            Back to Courses
+            </Button>
+            <Button onClick={() => navigate(`/courses/edit/${id}`)} className="gap-2">
+                Edit Course
+            </Button>
+        </div>
 
         <div className="admin-card overflow-hidden">
-          <div className="p-6 space-y-6">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Badge variant="secondary">{course.serviceType}</Badge>
-                  <Badge variant={course.isActive ? "default" : "destructive"}>
+          <div className="p-8 space-y-8">
+            {/* Header Section */}
+            <div>
+                <div className="flex flex-wrap items-center gap-3 mb-4">
+                  <Badge variant={course.isActive ? "default" : "destructive"} className="px-3 py-1 text-sm">
                     {course.isActive ? "Active" : "Inactive"}
                   </Badge>
+                  <Badge variant="outline" className="px-3 py-1 text-sm border-primary/20 text-primary bg-primary/5">
+                    {course.courseType}
+                  </Badge>
+                  <Badge variant="secondary" className="px-3 py-1 text-sm">
+                    {course.batchType} Batch
+                  </Badge>
+                  <span className="text-muted-foreground text-sm ml-auto font-mono">{course.courseId}</span>
                 </div>
-                <h1 className="text-2xl font-bold text-foreground">{course.courseName}</h1>
-              </div>
-              <Button onClick={() => navigate(`/courses/${id}/edit`)} className="gap-2">
-                Edit Course
-              </Button>
+                <h1 className="text-3xl font-bold text-foreground mb-2">{course.courseName}</h1>
+                <p className="text-muted-foreground text-lg">{course.description}</p>
             </div>
 
-            {/* Description */}
-            {course.description && (
-              <div>
-                <h3 className="font-semibold text-foreground mb-2">Description</h3>
-                <p className="text-muted-foreground leading-relaxed">{course.description}</p>
-              </div>
+            <div className="h-px bg-border" />
+
+            {/* Key Details Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Mentor</p>
+                    <p className="font-semibold text-foreground text-lg">{course.mentor}</p>
+                </div>
+                <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Language</p>
+                    <p className="font-semibold text-foreground text-lg">{course.language}</p>
+                </div>
+                <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Service Type</p>
+                    <p className="font-semibold text-foreground text-lg">{course.serviceType}</p>
+                </div>
+                <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Difficulty</p>
+                    <p className="font-semibold text-foreground text-lg">{course.difficultyLevel}</p>
+                </div>
+            </div>
+
+            {/* Schedule Section */}
+            <div className="bg-muted/30 rounded-xl p-6 border border-border/50">
+                <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-primary" />
+                    Schedule & Timing
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <p className="text-sm text-muted-foreground mb-1">Duration</p>
+                        <p className="font-medium text-foreground">{course.duration} Days</p>
+                    </div>
+                    <div>
+                        <p className="text-sm text-muted-foreground mb-1">Date Range</p>
+                        <p className="font-medium text-foreground">
+                            {new Date(course.startDate).toLocaleDateString()} - {new Date(course.endDate).toLocaleDateString()}
+                        </p>
+                    </div>
+                    <div>
+                        <p className="text-sm text-muted-foreground mb-1">Daily Timing</p>
+                        <p className="font-medium text-foreground">
+                            {course.startTime} - {course.endTime}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Address Section (Only for Offline) */}
+            {course.courseType === 'Offline' && course.address && (
+                <div className="bg-muted/30 rounded-xl p-6 border border-border/50">
+                     <h3 className="font-semibold text-foreground mb-2 flex items-center gap-2">
+                        <Tag className="w-4 h-4 text-primary" />
+                        Location
+                    </h3>
+                    <p className="text-foreground">{course.address}</p>
+                </div>
             )}
 
-            {/* Info Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {course.duration && (
-                <div className="bg-secondary/50 rounded-lg p-4">
-                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                    <Calendar className="w-4 h-4" />
-                    <span className="text-sm">Duration</span>
-                  </div>
-                  <p className="font-semibold text-foreground">{course.duration} days</p>
+            {/* Pricing Table */}
+            <div>
+                 <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-primary" />
+                    Global Pricing
+                </h3>
+                <div className="rounded-lg border overflow-hidden">
+                    <table className="w-full text-sm">
+                        <thead className="bg-muted text-muted-foreground">
+                            <tr>
+                                <th className="h-10 px-4 text-left font-medium">Region</th>
+                                <th className="h-10 px-4 text-left font-medium">Currency</th>
+                                <th className="h-10 px-4 text-right font-medium">Base Fee</th>
+                                <th className="h-10 px-4 text-right font-medium">Discount</th>
+                                <th className="h-10 px-4 text-right font-medium">Final Price</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                            {course.countryPricing && course.countryPricing.map((price: any, index: number) => (
+                                <tr key={index} className="bg-card hover:bg-muted/20 transition-colors">
+                                    <td className="p-4 font-medium">{price.country}</td>
+                                    <td className="p-4 text-muted-foreground">{price.currency}</td>
+                                    <td className="p-4 text-right">{price.price.toFixed(2)}</td>
+                                    <td className="p-4 text-right text-green-600">{price.discountPercentage}%</td>
+                                    <td className="p-4 text-right font-bold text-primary">
+                                        {/* Helper function or logic to show symbol could go here, for now just code */}
+                                        {price.finalPrice.toFixed(2)}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
                 </div>
-              )}
-
-              <div className="bg-secondary/50 rounded-lg p-4">
-                <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                  <Tag className="w-4 h-4" />
-                  <span className="text-sm">Service Type</span>
-                </div>
-                <p className="font-semibold text-foreground">{course.serviceType}</p>
-              </div>
-
-              <div className="bg-secondary/50 rounded-lg p-4">
-                <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                  <DollarSign className="w-4 h-4" />
-                  <span className="text-sm">Enrollments</span>
-                </div>
-                <p className="font-semibold text-foreground">{course.enrollmentCount || 0} students</p>
-              </div>
             </div>
 
-            {/* Pricing */}
-            <div className="bg-primary/5 border border-primary/20 rounded-lg p-6">
-              <h3 className="font-semibold text-foreground mb-4">Pricing Details</h3>
-              <div className="flex flex-wrap items-end gap-6">
-                <div>
-                  <span className="text-sm text-muted-foreground block mb-1">Original Fee</span>
-                  <p className={course.discountPercentage && course.discountPercentage > 0 ? "text-lg line-through text-muted-foreground" : "text-2xl font-semibold text-foreground"}>
-                    ${course.price}
-                  </p>
-                </div>
-                {course.discountPercentage && course.discountPercentage > 0 && (
-                  <>
-                    <div>
-                      <span className="text-sm text-muted-foreground block mb-1">Discount</span>
-                      <p className="text-lg text-success font-medium">-{course.discountPercentage}%</p>
-                    </div>
-                    <div>
-                      <span className="text-sm text-muted-foreground block mb-1">Final Price</span>
-                      <p className="text-3xl font-bold text-primary">${finalPrice}</p>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Dates */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-secondary/30 rounded-lg p-4">
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Start Date</p>
-                <p className="font-semibold text-foreground">
-                  {course.startDate ? new Date(course.startDate).toLocaleDateString() : "N/A"}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">End Date</p>
-                <p className="font-semibold text-foreground">
-                  {course.endDate ? new Date(course.endDate).toLocaleDateString() : "N/A"}
-                </p>
-              </div>
-            </div>
-
-            {/* Additional Info */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-border">
-              <div>
-                <p className="text-sm text-muted-foreground">Mentor</p>
-                <p className="font-semibold text-foreground">{course.mentor || "N/A"}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Course ID</p>
-                <p className="font-semibold text-foreground">{course.courseId || "N/A"}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Created</p>
-                <p className="font-semibold text-foreground">
-                  {course.createdAt ? new Date(course.createdAt).toLocaleDateString() : "N/A"}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Last Updated</p>
-                <p className="font-semibold text-foreground">
-                  {course.updatedAt ? new Date(course.updatedAt).toLocaleDateString() : "N/A"}
-                </p>
-              </div>
+            {/* Metadata Footer */}
+            <div className="pt-6 border-t border-border flex flex-wrap gap-6 text-sm text-muted-foreground">
+                <p>Created: {new Date(course.createdAt).toLocaleDateString()}</p>
+                <p>Last Updated: {new Date(course.updatedAt).toLocaleDateString()}</p>
+                <p>Total Enrollments: {course.enrollmentCount}</p>
             </div>
           </div>
         </div>
