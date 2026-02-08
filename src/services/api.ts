@@ -248,6 +248,35 @@ export const getPaymentDetails = async (registrationId: string) => {
   );
 };
 
+export const exportRegistrations = async (filters?: any) => {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('No authentication token found');
+  }
+
+  const params = new URLSearchParams();
+  if (filters?.startDate) params.append('startDate', filters.startDate);
+  if (filters?.endDate) params.append('endDate', filters.endDate);
+  if (filters?.status) params.append('status', filters.status);
+
+  // Combine participantName and courseName into search param as per backend logic
+  const search = filters?.participantName || filters?.courseName || filters?.search;
+  if (search) params.append('search', search);
+
+  const response = await fetch(`${API_BASE_URL}/admin/registrations/export?${params.toString()}`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+
+  return await response.blob();
+};
+
 export const getDashboardStats = async () => {
   return await apiRequest(
     '/admin/registrations/dashboard/statistics',

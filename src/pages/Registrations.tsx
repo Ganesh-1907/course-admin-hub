@@ -1,15 +1,16 @@
 import { useState, useEffect } from "react";
-import { Search, Calendar, Eye, ChevronLeft, ChevronRight, Loader } from "lucide-react";
+import { Search, Calendar, Eye, ChevronLeft, ChevronRight, Loader, Download } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { getAllRegistrations, getRegistrationDetail } from "@/services/api";
+import { getAllRegistrations, getRegistrationDetail, exportRegistrations } from "@/services/api";
 
 const Registrations = () => {
   const [registrations, setRegistrations] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [selectedRegistration, setSelectedRegistration] = useState<any | null>(null);
   const [showDetail, setShowDetail] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -65,6 +66,27 @@ const Registrations = () => {
     }
   };
 
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const blob = await exportRegistrations(filters);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Registrations_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast.success("Registrations exported successfully");
+    } catch (error) {
+      toast.error("Failed to export registrations");
+      console.error(error);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const handleFilterChange = (field: string, value: string) => {
     setFilters({ ...filters, [field]: value });
     setCurrentPage(1);
@@ -80,7 +102,7 @@ const Registrations = () => {
 
         {/* Filters */}
         <div className="admin-card p-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
             <div className="relative">
               <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
@@ -126,6 +148,10 @@ const Registrations = () => {
                 onChange={(e) => handleFilterChange("status", e.target.value)}
               />
             </div>
+            <Button onClick={handleExport} disabled={exporting} className="w-full">
+              {exporting ? <Loader className="w-4 h-4 animate-spin mr-2" /> : <Download className="w-4 h-4 mr-2" />}
+              Export Excel
+            </Button>
           </div>
         </div>
 
@@ -154,24 +180,24 @@ const Registrations = () => {
                 </tr>
               </thead>
               <tbody>
-                {registrations.map((reg) => (
+                  {registrations.map((reg) => (
                   <tr key={reg._id} className="border-b border-border hover:bg-muted/50 transition-colors">
-                    <td className="px-4 py-3 text-foreground">{reg.participantName || "N/A"}</td>
-                    <td className="px-4 py-3 text-foreground">{reg.email || "N/A"}</td>
-                    <td className="px-4 py-3 text-foreground">{reg.mobile || "N/A"}</td>
-                    <td className="px-4 py-3 text-foreground">{reg.courseName || "N/A"}</td>
-                    <td className="px-4 py-3 text-foreground">${reg.amount || 0}</td>
+                    <td className="px-4 py-3 text-foreground font-medium">{reg.participantId?.name || "N/A"}</td>
+                    <td className="px-4 py-3 text-foreground">{reg.participantId?.email || "N/A"}</td>
+                    <td className="px-4 py-3 text-foreground">{reg.participantId?.mobile || "N/A"}</td>
+                    <td className="px-4 py-3 text-foreground">{reg.courseId?.courseName || "N/A"}</td>
+                    <td className="px-4 py-3 text-foreground">{reg.currency} {reg.finalAmount || 0}</td>
                     <td className="px-4 py-3">
                       <span className={
-                        reg.status === "Completed" ? "font-semibold text-green-600" :
-                        reg.status === "Cancelled" ? "font-semibold text-red-600" :
+                        reg.registrationStatus === "COMPLETED" || reg.registrationStatus === "CONFIRMED" ? "font-semibold text-green-600" :
+                        reg.registrationStatus === "CANCELLED" || reg.registrationStatus === "REFUNDED" ? "font-semibold text-red-600" :
                         "font-semibold text-orange-600"
                       }>
-                        {reg.status || "Pending"}
+                        {reg.registrationStatus || "PENDING"}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-foreground">
-                      {reg.registrationDate ? new Date(reg.registrationDate).toLocaleDateString() : "N/A"}
+                      {reg.createdAt ? new Date(reg.createdAt).toLocaleDateString() : "N/A"}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end">
@@ -244,43 +270,51 @@ const Registrations = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Participant Name</p>
-                  <p className="font-semibold">{selectedRegistration.participantName || "N/A"}</p>
+                  <p className="font-semibold">{selectedRegistration.participantId?.name || "N/A"}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Email</p>
-                  <p className="font-semibold">{selectedRegistration.email || "N/A"}</p>
+                  <p className="font-semibold">{selectedRegistration.participantId?.email || "N/A"}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Mobile</p>
-                  <p className="font-semibold">{selectedRegistration.mobile || "N/A"}</p>
+                  <p className="font-semibold">{selectedRegistration.participantId?.mobile || "N/A"}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Course Name</p>
-                  <p className="font-semibold">{selectedRegistration.courseName || "N/A"}</p>
+                  <p className="font-semibold">{selectedRegistration.courseId?.courseName || "N/A"}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Amount</p>
-                  <p className="font-semibold">${selectedRegistration.amount || 0}</p>
+                  <p className="font-semibold">{selectedRegistration.currency} {selectedRegistration.finalAmount || 0}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Status</p>
                   <p className={
-                    selectedRegistration.status === "Completed" ? "font-semibold text-green-600" :
-                    selectedRegistration.status === "Cancelled" ? "font-semibold text-red-600" :
+                    selectedRegistration.registrationStatus === "COMPLETED" || selectedRegistration.registrationStatus === "CONFIRMED" ? "font-semibold text-green-600" :
+                    selectedRegistration.registrationStatus === "CANCELLED" || selectedRegistration.registrationStatus === "REFUNDED" ? "font-semibold text-red-600" :
                     "font-semibold text-orange-600"
                   }>
-                    {selectedRegistration.status || "Pending"}
+                    {selectedRegistration.registrationStatus || "PENDING"}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Registration Date</p>
                   <p className="font-semibold">
-                    {selectedRegistration.registrationDate ? new Date(selectedRegistration.registrationDate).toLocaleDateString() : "N/A"}
+                    {selectedRegistration.createdAt ? new Date(selectedRegistration.createdAt).toLocaleDateString() : "N/A"}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Payment ID</p>
                   <p className="font-semibold">{selectedRegistration.paymentId || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Payment Mode</p>
+                   <p className="font-semibold">{selectedRegistration.paymentMode || "N/A"}</p>
+                </div>
+                 <div>
+                  <p className="text-sm text-muted-foreground">Registration Number</p>
+                   <p className="font-semibold">{selectedRegistration.registrationNumber || "N/A"}</p>
                 </div>
               </div>
             </div>
