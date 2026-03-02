@@ -288,9 +288,14 @@ export const exportRegistrations = async (filters?: any) => {
   return await response.blob();
 };
 
-export const getDashboardStats = async () => {
+export const getDashboardStats = async (filters?: any) => {
+  const params = new URLSearchParams();
+  if (filters?.type) params.append('type', filters.type);
+  if (filters?.startDate) params.append('startDate', filters.startDate);
+  if (filters?.endDate) params.append('endDate', filters.endDate);
+
   return await apiRequest(
-    '/admin/registrations/dashboard/statistics',
+    `/admin/registrations/dashboard/statistics?${params.toString()}`,
     'GET'
   );
 };
