@@ -36,6 +36,7 @@ const apiRequest = async (
 ) => {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
+    'X-CMS-App-Token': 'CMS-V3-SECURE-ACCESS',
   };
 
   // If body is FormData, let browser set Content-Type with boundary
