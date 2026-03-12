@@ -4,7 +4,6 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { toast } from "sonner";
-import { getDashboardStats } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -12,6 +11,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import { getDashboardStats, getServiceTypes } from "@/services/api";
 
 const COLORS = ["hsl(210, 100%, 45%)", "hsl(200, 85%, 55%)", "hsl(180, 70%, 45%)", "hsl(160, 60%, 45%)", "hsl(145, 65%, 42%)", "hsl(38, 92%, 50%)"];
 
@@ -20,6 +20,7 @@ const Dashboard = () => {
   const [registrationData, setRegistrationData] = useState<any[]>([]);
   const [courseTypeData, setCourseTypeData] = useState<any[]>([]);
   const [topCourses, setTopCourses] = useState<any[]>([]);
+  const [serviceTypesList, setServiceTypesList] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Applied filters state
@@ -79,18 +80,33 @@ const Dashboard = () => {
           },
         ]);
         
-        setRegistrationData([]);
+        setRegistrationData(Array.isArray(data.registrationsOverTime) ? data.registrationsOverTime : []);
         setCourseTypeData(Array.isArray(data.coursesByType) ? data.coursesByType : []);
         setTopCourses(Array.isArray(data.topCourses) ? data.topCourses : []);
       } else {
-        toast.error(statsResponse.message || "Failed to fetch dashboard stats");
+        toast.error("Failed to load dashboard stats. Please try again.");
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to fetch dashboard data");
+      toast.error("Unable to connect to service. Please check your network.");
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const fetchServiceTypesList = async () => {
+      try {
+        const response = await getServiceTypes();
+        if (response.success && response.data) {
+          const names = response.data.map((st: any) => st.name);
+          setServiceTypesList(names);
+        }
+      } catch (error) {
+        console.error("Failed to fetch service types:", error);
+      }
+    };
+    fetchServiceTypesList();
+  }, []);
 
   useEffect(() => {
     fetchDashboardData();
@@ -168,15 +184,17 @@ const Dashboard = () => {
               <SelectTrigger className="w-[160px]">
                 <SelectValue placeholder="Filter by type" />
               </SelectTrigger>
-              <SelectContent className="bg-card border-border">
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="agile">Agile</SelectItem>
-                <SelectItem value="service">Service</SelectItem>
-                <SelectItem value="safe">SAFe</SelectItem>
-                <SelectItem value="project">Project</SelectItem>
-                <SelectItem value="quality">Quality</SelectItem>
-                <SelectItem value="business">Business</SelectItem>
-                <SelectItem value="genai">Generative AI</SelectItem>
+              <SelectContent className="bg-card border-border rounded-xl overflow-y-auto max-h-60">
+                <SelectItem value="all" className="text-left bg-muted/30">All Types</SelectItem>
+                {serviceTypesList.map((type, index) => (
+                  <SelectItem 
+                    key={type} 
+                    value={type}
+                    className={`text-left ${(index + 1) % 2 === 0 ? "bg-muted/30" : "bg-card"}`}
+                  >
+                    {type}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
