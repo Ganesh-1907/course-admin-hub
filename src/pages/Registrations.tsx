@@ -179,6 +179,7 @@ const Registrations = () => {
                   <th className="table-header-cell font-bold text-black">Email</th>
                   <th className="table-header-cell font-bold text-black">Mobile</th>
                   <th className="table-header-cell font-bold text-black">Course</th>
+                  <th className="table-header-cell font-bold text-black">Gateway</th>
                   <th className="table-header-cell font-bold text-black">Amount</th>
                   <th className="table-header-cell font-bold text-black">Status</th>
                   <th className="table-header-cell font-bold text-black">Registered Date</th>
@@ -190,8 +191,13 @@ const Registrations = () => {
                   <tr key={reg.id || reg._id} className="border-b border-border hover:bg-muted/50 transition-colors">
                     <td className="px-4 py-3 text-foreground font-medium">{reg.userName || "N/A"}</td>
                     <td className="px-4 py-3 text-foreground">{reg.email || "N/A"}</td>
-                    <td className="px-4 py-3 text-foreground">{reg.mobile || reg.phone || "N/A"}</td>
+                    <td className="px-4 py-3 text-foreground">{reg.mobile || "N/A"}</td>
                     <td className="px-4 py-3 text-foreground">{reg.courseName || "N/A"}</td>
+                    <td className="px-4 py-3">
+                      <span className="px-2 py-1 rounded-md bg-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                        {reg.paymentGateway || "N/A"}
+                      </span>
+                    </td>
                     <td className="px-4 py-3 text-foreground">{reg.currency} {reg.amountPaid || 0}</td>
                     <td className="px-4 py-3">
                       <span className={
@@ -295,11 +301,19 @@ const Registrations = () => {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Mobile</p>
-                  <p className="font-semibold">{selectedRegistration.mobile || selectedRegistration.phone || "N/A"}</p>
+                  <p className="font-semibold">{selectedRegistration.mobile || "N/A"}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Course Name</p>
                   <p className="font-semibold">{selectedRegistration.courseName || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Payment Gateway</p>
+                  <p className="font-semibold">
+                    <span className="px-2 py-1 rounded-md bg-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                      {selectedRegistration.paymentGateway || "N/A"}
+                    </span>
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Amount</p>
