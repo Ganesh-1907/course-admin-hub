@@ -163,6 +163,14 @@ export const getServiceTypes = async () => {
   return await apiRequest('/admin/courses/service-types', 'GET');
 };
 
+export const getCourseCatalog = async () => {
+  return await apiRequest('/admin/courses/catalog', 'GET');
+};
+
+export const getMentorsByCourse = async (courseId: string | number) => {
+  return await apiRequest(`/admin/courses/catalog/${courseId}/mentors`, 'GET');
+};
+
 export const getCourseById = async (courseId: string) => {
   return await apiRequest(`/admin/courses/${courseId}`, 'GET');
 };

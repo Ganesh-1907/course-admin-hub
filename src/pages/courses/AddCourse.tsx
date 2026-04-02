@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Calendar as CalendarIcon, Clock, Upload } from "lucide-react";
+import { Upload } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,21 +10,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { createCourse, getCourseById, updateCourse } from "@/services/api";
+import {
+  createCourse,
+  getCourseById,
+  getCourseCatalog,
+  getMentorsByCourse,
+  updateCourse,
+} from "@/services/api";
 
-const serviceTypes = ["Agile", "Service", "SAFe", "Project", "Quality", "Business", "Generative AI"];
 const difficultyLevels = ["Beginner", "Intermediate", "Advanced"];
-const languages = ["English", "Spanish"];
-const batchTypes = ["Weekend", "Weekdays"];
-const courseTypes = ["Online", "Offline"];
+const languages = ["English", "Hindi", "Spanish"];
+const batchTypes = ["WEEKEND", "WEEKDAY", "FAST TRACK"];
+const courseTypes = ["ONLINE", "OFFLINE"];
 
 const countryConfigs = [
-    { country: "USA", currency: "USD", symbol: "$" },
-    { country: "Canadian", currency: "CAD", symbol: "C$" },
-    { country: "Europe", currency: "EUR", symbol: "€" },
-    { country: "India", currency: "INR", symbol: "₹" },
-    { country: "Australia", currency: "AUD", symbol: "A$" },
-    { country: "Singapore", currency: "SGD", symbol: "S$" }
+  { country: "USA", currency: "USD", symbol: "$" },
+  { country: "Canada", currency: "CAD", symbol: "C$" },
+  { country: "Europe", currency: "EUR", symbol: "EUR" },
+  { country: "India", currency: "INR", symbol: "Rs" },
+  { country: "Australia", currency: "AUD", symbol: "A$" },
+  { country: "Singapore", currency: "SGD", symbol: "S$" },
 ];
 
 interface CountryPricing {
@@ -35,16 +40,48 @@ interface CountryPricing {
   price: string;
 }
 
+interface CourseOption {
+  id: number;
+  name: string;
+  serviceType: string;
+}
+
+interface MentorOption {
+  id: number;
+  name: string;
+  specialization?: string;
+  designation?: string;
+  rating?: number | null;
+  yearsOfExperience?: number | null;
+  photoUrl?: string;
+}
+
+const buildDefaultPricing = (): CountryPricing[] => countryConfigs.map((config) => ({
+  country: config.country,
+  currency: config.currency,
+  fee: "",
+  discount: "0",
+  price: "0.00",
+}));
+
 const AddCourse = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditMode = Boolean(id);
+
   const [loading, setLoading] = useState(false);
-  
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [mentorLoading, setMentorLoading] = useState(false);
+  const [courseOptions, setCourseOptions] = useState<CourseOption[]>([]);
+  const [mentorOptions, setMentorOptions] = useState<MentorOption[]>([]);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [brochureFile, setBrochureFile] = useState<File | null>(null);
+  const [existingBrochure, setExistingBrochure] = useState<string | null>(null);
+
   const [formData, setFormData] = useState({
-    title: "",
+    courseId: "",
+    mentorId: "",
     description: "",
-    mentor: "",
     serviceType: "",
     difficultyLevel: "",
     isActive: true,
@@ -57,196 +94,229 @@ const AddCourse = () => {
     batchType: "",
     courseType: "",
     address: "",
-    countryPricing: countryConfigs.map(c => ({
-      country: c.country,
-      currency: c.currency,
-      fee: "",
-      discount: "0",
-      price: "0.00"
-    })) as CountryPricing[]
+    countryPricing: buildDefaultPricing(),
   });
-  
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [brochureFile, setBrochureFile] = useState<File | null>(null);
-  const [existingBrochure, setExistingBrochure] = useState<string | null>(null);
+
+  const selectedCourse = courseOptions.find((course) => String(course.id) === formData.courseId) || null;
+  const selectedMentor = mentorOptions.find((mentor) => String(mentor.id) === formData.mentorId) || null;
+
+  const loadMentors = async (courseId: string, preferredMentorId?: string) => {
+    if (!courseId) {
+      setMentorOptions([]);
+      setFormData((prev) => ({ ...prev, mentorId: "" }));
+      return;
+    }
+
+    setMentorLoading(true);
+    try {
+      const response = await getMentorsByCourse(courseId);
+      const options: MentorOption[] = response.success ? (response.data || []) : [];
+      setMentorOptions(options);
+
+      if (preferredMentorId && options.some((mentor) => String(mentor.id) === preferredMentorId)) {
+        setFormData((prev) => ({ ...prev, mentorId: preferredMentorId }));
+      } else {
+        setFormData((prev) => ({
+          ...prev,
+          mentorId: options.some((mentor) => String(mentor.id) === prev.mentorId) ? prev.mentorId : "",
+        }));
+      }
+    } catch (error) {
+      setMentorOptions([]);
+      setFormData((prev) => ({ ...prev, mentorId: "" }));
+      toast.error(error instanceof Error ? error.message : "Failed to load mentors");
+    } finally {
+      setMentorLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchCourse = async () => {
+    const loadCatalog = async () => {
+      setCatalogLoading(true);
+      try {
+        const response = await getCourseCatalog();
+        if (response.success) {
+          setCourseOptions(response.data || []);
+        } else {
+          toast.error(response.message || "Failed to load course catalog");
+        }
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to load course catalog");
+      } finally {
+        setCatalogLoading(false);
+      }
+    };
+
+    loadCatalog();
+  }, []);
+
+  useEffect(() => {
+    if (!formData.courseId) {
+      setMentorOptions([]);
+      setFormData((prev) => ({ ...prev, serviceType: "" }));
+      return;
+    }
+
+    const serviceType = selectedCourse?.serviceType || "";
+    setFormData((prev) => (prev.serviceType === serviceType ? prev : { ...prev, serviceType }));
+    loadMentors(formData.courseId);
+  }, [formData.courseId, selectedCourse?.serviceType]);
+
+  useEffect(() => {
+    const fetchSchedule = async () => {
       if (!id) return;
+
       setLoading(true);
       try {
         const response = await getCourseById(id);
-        if (response.success && response.data) {
-          const course = response.data;
-          
-          let cPricing = countryConfigs.map(c => ({
-            country: c.country,
-            currency: c.currency,
-            fee: "",
-            discount: "0",
-            price: "0.00"
-          }));
+        if (!response.success || !response.data) {
+          throw new Error(response.message || "Failed to load schedule");
+        }
 
-          if (course.countryPricing && course.countryPricing.length > 0) {
-             cPricing = countryConfigs.map(config => {
-                const existing = course.countryPricing.find((cp: any) => cp.country === config.country);
-                if (existing) {
-                    return {
-                        country: existing.country,
-                        currency: existing.currency || config.currency,
-                        fee: String(existing.price),
-                        discount: String(existing.discountPercentage),
-                        price: String(existing.finalPrice)
-                    };
-                }
-                return { 
-                    country: config.country, 
-                    currency: config.currency, 
-                    fee: "", 
-                    discount: "0", 
-                    price: "0.00" 
-                };
-             });
-          }
+        const schedule = response.data;
+        const formattedPricing = buildDefaultPricing().map((config) => {
+          const existing = schedule.countryPricing?.find((item: any) => item.country === config.country);
+          if (!existing) return config;
+          return {
+            country: existing.country,
+            currency: existing.currency || config.currency,
+            fee: String(existing.price ?? ""),
+            discount: String(existing.discountPercentage ?? 0),
+            price: String(existing.finalPrice ?? 0),
+          };
+        });
 
-          setFormData({
-            title: course.courseName || "",
-            description: course.description || "",
-            mentor: course.mentor || "",
-            serviceType: course.serviceType || "",
-            difficultyLevel: course.difficultyLevel || "",
-            isActive: course.isActive ?? true,
-            startDate: course.startDate ? new Date(course.startDate).toISOString().slice(0, 10) : "",
-            endDate: course.endDate ? new Date(course.endDate).toISOString().slice(0, 10) : "",
-            duration: course.duration ? String(course.duration) : "",
-            language: course.language || "English",
-            startTime: course.startTime || "",
-            endTime: course.endTime || "",
-            batchType: course.batchType || "",
-            courseType: course.courseType || "",
-            address: course.address || "",
-            address: course.address || "",
-            countryPricing: cPricing
-          });
-          if (course.brochure?.url) {
-            setExistingBrochure(course.brochure.url);
-          }
-        } else {
-          toast.error(response.message || "Failed to load course");
-          navigate("/courses");
+        setFormData({
+          courseId: String(schedule.courseId || ""),
+          mentorId: String(schedule.mentorId || ""),
+          description: schedule.description || "",
+          serviceType: schedule.serviceType || "",
+          difficultyLevel: schedule.difficultyLevel || "",
+          isActive: schedule.isActive ?? true,
+          startDate: schedule.startDate ? new Date(schedule.startDate).toISOString().slice(0, 10) : "",
+          endDate: schedule.endDate ? new Date(schedule.endDate).toISOString().slice(0, 10) : "",
+          duration: schedule.duration ? String(schedule.duration) : "",
+          language: schedule.language || "English",
+          startTime: schedule.startTime || "",
+          endTime: schedule.endTime || "",
+          batchType: schedule.batchType || "",
+          courseType: schedule.courseType || "",
+          address: schedule.address || "",
+          countryPricing: formattedPricing,
+        });
+
+        setExistingBrochure(schedule.brochure?.url || schedule.brochureUrl || null);
+
+        if (schedule.courseId) {
+          await loadMentors(String(schedule.courseId), String(schedule.mentorId || ""));
         }
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Failed to load course");
+        toast.error(error instanceof Error ? error.message : "Failed to load schedule");
         navigate("/courses");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchCourse();
+    fetchSchedule();
   }, [id, navigate]);
 
   const handlePricingChange = (index: number, field: keyof CountryPricing, value: string) => {
-    const newPricing = [...formData.countryPricing];
-    newPricing[index] = { ...newPricing[index], [field]: value };
-    
-    if (field === 'fee' || field === 'discount') {
-        const fee = parseFloat(newPricing[index].fee) || 0;
-        const discount = parseFloat(newPricing[index].discount) || 0;
-        const price = fee - (fee * discount / 100);
-        newPricing[index].price = price.toFixed(2);
+    const nextPricing = [...formData.countryPricing];
+    nextPricing[index] = { ...nextPricing[index], [field]: value };
+
+    if (field === "fee" || field === "discount") {
+      const fee = parseFloat(nextPricing[index].fee) || 0;
+      const discount = parseFloat(nextPricing[index].discount) || 0;
+      const finalPrice = fee - (fee * discount) / 100;
+      nextPricing[index].price = finalPrice.toFixed(2);
     }
 
-    setFormData({ ...formData, countryPricing: newPricing });
+    setFormData((prev) => ({ ...prev, countryPricing: nextPricing }));
   };
 
   const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-    if (!formData.title) newErrors.title = "Course name is required";
-    if (!formData.description) newErrors.description = "Description is required";
-    if (!formData.mentor) newErrors.mentor = "Mentor name is required";
-    if (!formData.startDate) newErrors.startDate = "Start date is required";
-    if (!formData.endDate) newErrors.endDate = "End date is required";
-    if (!formData.duration) newErrors.duration = "Duration is required";
-    if (!formData.serviceType) newErrors.serviceType = "Service type is required";
-    if (!formData.difficultyLevel) newErrors.difficultyLevel = "Difficulty level is required";
-    
-    if (!formData.startTime) newErrors.startTime = "Start time is required";
-    if (!formData.endTime) newErrors.endTime = "End time is required";
-    if (!formData.batchType) newErrors.batchType = "Batch type is required";
-    if (!formData.courseType) newErrors.courseType = "Course type is required";
-    if (formData.courseType === 'Offline' && !formData.address) newErrors.address = "Address is required for offline courses";
+    const nextErrors: Record<string, string> = {};
 
-    const hasPricing = formData.countryPricing.some(p => p.fee && parseFloat(p.fee) > 0);
-    if (!hasPricing) newErrors.pricing = "At least one country pricing is required";
+    if (!formData.courseId) nextErrors.courseId = "Course selection is required";
+    if (!formData.mentorId) nextErrors.mentorId = "Mentor selection is required";
+    if (!formData.description) nextErrors.description = "Description is required";
+    if (!formData.startDate) nextErrors.startDate = "Start date is required";
+    if (!formData.endDate) nextErrors.endDate = "End date is required";
+    if (!formData.duration) nextErrors.duration = "Duration is required";
+    if (!formData.difficultyLevel) nextErrors.difficultyLevel = "Difficulty level is required";
+    if (!formData.startTime) nextErrors.startTime = "Start time is required";
+    if (!formData.endTime) nextErrors.endTime = "End time is required";
+    if (!formData.batchType) nextErrors.batchType = "Batch type is required";
+    if (!formData.courseType) nextErrors.courseType = "Course type is required";
+    if (formData.courseType === "OFFLINE" && !formData.address) nextErrors.address = "Address is required for offline batches";
+
+    const hasPricing = formData.countryPricing.some((pricing) => pricing.fee && parseFloat(pricing.fee) > 0);
+    if (!hasPricing) nextErrors.pricing = "At least one pricing row is required";
 
     if (formData.startDate && formData.endDate && formData.startDate >= formData.endDate) {
-      newErrors.endDate = "End date must be after start date";
+      nextErrors.endDate = "End date must be after start date";
     }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
     if (!validateForm()) {
-        toast.error("Please fill in all required fields correctly.");
-        return;
+      toast.error("Please fix the highlighted fields.");
+      return;
     }
 
     setLoading(true);
     try {
-      const defaultPricing = formData.countryPricing.find(p => p.country === 'USA') || formData.countryPricing[0];
-      
       const payload = new FormData();
-      payload.append('courseName', formData.title);
-      payload.append('description', formData.description);
-      payload.append('mentor', formData.mentor);
-      payload.append('serviceType', formData.serviceType);
-      payload.append('difficultyLevel', formData.difficultyLevel);
-      payload.append('isActive', String(formData.isActive));
-      payload.append('startDate', formData.startDate);
-      payload.append('endDate', formData.endDate);
-      payload.append('duration', formData.duration);
-      payload.append('language', formData.language);
-      payload.append('startTime', formData.startTime);
-      payload.append('endTime', formData.endTime);
-      payload.append('batchType', formData.batchType);
-      payload.append('courseType', formData.courseType);
-      
-      if (formData.courseType === 'Offline') {
-          payload.append('address', formData.address);
+      payload.append("courseId", formData.courseId);
+      payload.append("mentorId", formData.mentorId);
+      payload.append("description", formData.description);
+      payload.append("difficultyLevel", formData.difficultyLevel);
+      payload.append("isActive", String(formData.isActive));
+      payload.append("startDate", formData.startDate);
+      payload.append("endDate", formData.endDate);
+      payload.append("duration", formData.duration);
+      payload.append("language", formData.language);
+      payload.append("startTime", formData.startTime);
+      payload.append("endTime", formData.endTime);
+      payload.append("batchType", formData.batchType);
+      payload.append("courseType", formData.courseType);
+
+      if (formData.courseType === "OFFLINE") {
+        payload.append("address", formData.address);
       }
-      
-      const pricingData = formData.countryPricing.map(p => ({
-            country: p.country,
-            currency: p.currency,
-            price: parseFloat(p.fee) || 0,
-            discountPercentage: parseFloat(p.discount) || 0,
-            finalPrice: parseFloat(p.price) || 0
+
+      const pricingData = formData.countryPricing.map((pricing) => ({
+        country: pricing.country,
+        currency: pricing.currency,
+        price: parseFloat(pricing.fee) || 0,
+        discountPercentage: parseFloat(pricing.discount) || 0,
+        finalPrice: parseFloat(pricing.price) || 0,
       }));
-      
-      payload.append('countryPricing', JSON.stringify(pricingData));
-      payload.append('price', String(parseFloat(defaultPricing.fee) || 0));
-      payload.append('discountPercentage', String(parseFloat(defaultPricing.discount) || 0));
+
+      payload.append("countryPricing", JSON.stringify(pricingData));
 
       if (brochureFile) {
-        payload.append('brochure', brochureFile);
+        payload.append("brochure", brochureFile);
       }
 
       const response = isEditMode && id
         ? await updateCourse(id, payload)
         : await createCourse(payload);
 
-      if (response.success) {
-        toast.success(isEditMode ? "Course updated successfully!" : "Course created successfully!");
-        navigate("/courses");
-      } else {
-        toast.error(response.message || "Failed to save course");
+      if (!response.success) {
+        throw new Error(response.message || "Failed to save schedule");
       }
+
+      toast.success(isEditMode ? "Schedule updated successfully!" : "Schedule created successfully!");
+      navigate("/courses");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save course");
+      toast.error(error instanceof Error ? error.message : "Failed to save schedule");
     } finally {
       setLoading(false);
     }
@@ -256,361 +326,328 @@ const AddCourse = () => {
     <AdminLayout>
       <div className="max-w-6xl mx-auto">
         <div className="mb-6">
-          <h1 className="page-title">{isEditMode ? "Edit Course" : "Add New Course"}</h1>
+          <h1 className="page-title">{isEditMode ? "Edit Schedule" : "Add New Schedule"}</h1>
           <p className="page-subtitle">
-            {isEditMode ? "Update course details" : "Create a new course for your students"}
+            Choose a course, then assign only the mentors mapped to that course.
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="admin-card p-6 space-y-6">
-            {/* Row 1: Basic Info */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <Label htmlFor="title" className="form-label">Course Name *</Label>
-                <Input
-                  id="title"
-                  className="rounded-lg border-input focus:border-primary focus:ring-1 focus:ring-primary"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="Enter course name"
-                />
-                {errors.title && <p className="text-destructive text-sm mt-1">{errors.title}</p>}
-              </div>
-
-              <div>
-                <Label htmlFor="mentor" className="form-label">Mentor Name *</Label>
-                <Input
-                  id="mentor"
-                  className="rounded-lg border-input focus:border-primary focus:ring-1 focus:ring-primary"
-                  value={formData.mentor}
-                  onChange={(e) => setFormData({ ...formData, mentor: e.target.value })}
-                  placeholder="Enter mentor name"
-                />
-                {errors.mentor && <p className="text-destructive text-sm mt-1">{errors.mentor}</p>}
-              </div>
-
-              <div>
-               <Label htmlFor="language" className="form-label">Language *</Label>
-               <Select
-                 value={formData.language}
-                 onValueChange={(value) => setFormData({ ...formData, language: value })}
-               >
-                 <SelectTrigger className="rounded-lg border-input focus:border-primary focus:ring-1 focus:ring-primary">
-                   <SelectValue placeholder="Select language" />
-                 </SelectTrigger>
-                 <SelectContent className="bg-card border-border">
-                   {languages.map((lang) => (
-                     <SelectItem key={lang} value={lang}>{lang}</SelectItem>
-                   ))}
-                 </SelectContent>
-               </Select>
-             </div>
-            </div>
-
-            {/* Row 2: Description */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
-              <Label htmlFor="description" className="form-label">Description *</Label>
-              <Textarea
-                id="description"
-                className="rounded-lg border-input focus:border-primary focus:ring-1 focus:ring-primary min-h-[100px]"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Enter course description"
-                rows={4}
-              />
-              {errors.description && <p className="text-destructive text-sm mt-1">{errors.description}</p>}
-            </div>
-            
-            {/* Row 3: Class & Type */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <Label htmlFor="serviceType" className="form-label">Service Type *</Label>
-                <Select
-                  value={formData.serviceType}
-                  onValueChange={(value) => setFormData({ ...formData, serviceType: value })}
-                >
-                  <SelectTrigger className="rounded-lg border-input focus:border-primary focus:ring-1 focus:ring-primary">
-                    <SelectValue placeholder="Select service type" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-card border-border">
-                    {serviceTypes.map((type) => (
-                      <SelectItem key={type} value={type}>{type}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.serviceType && <p className="text-destructive text-sm mt-1">{errors.serviceType}</p>}
-              </div>
-
-              <div>
-                <Label htmlFor="difficultyLevel" className="form-label">Difficulty Level *</Label>
-                <Select
-                  value={formData.difficultyLevel}
-                  onValueChange={(value) => setFormData({ ...formData, difficultyLevel: value })}
-                >
-                  <SelectTrigger className="rounded-lg border-input focus:border-primary focus:ring-1 focus:ring-primary">
-                    <SelectValue placeholder="Select difficulty level" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-card border-border">
-                    {difficultyLevels.map((level) => (
-                      <SelectItem key={level} value={level}>{level}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.difficultyLevel && <p className="text-destructive text-sm mt-1">{errors.difficultyLevel}</p>}
-              </div>
-
-              <div>
-                <Label htmlFor="courseType" className="form-label">Course Type *</Label>
-                <Select
-                  value={formData.courseType}
-                  onValueChange={(value) => setFormData({ ...formData, courseType: value })}
-                >
-                  <SelectTrigger className="rounded-lg border-input focus:border-primary focus:ring-1 focus:ring-primary">
-                    <SelectValue placeholder="Select course type" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-card border-border">
-                    {courseTypes.map((type) => (
-                      <SelectItem key={type} value={type}>{type}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.courseType && <p className="text-destructive text-sm mt-1">{errors.courseType}</p>}
-              </div>
+              <Label className="form-label">Course *</Label>
+              <Select
+                value={formData.courseId}
+                onValueChange={(value) => setFormData((prev) => ({ ...prev, courseId: value, mentorId: "" }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={catalogLoading ? "Loading courses..." : "Select course"} />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border max-h-80">
+                  {courseOptions.map((course) => (
+                    <SelectItem key={course.id} value={String(course.id)}>
+                      {course.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.courseId && <p className="text-destructive text-sm mt-1">{errors.courseId}</p>}
             </div>
 
-            {formData.courseType === 'Offline' && (
-                <div>
-                    <Label htmlFor="address" className="form-label">Address *</Label>
-                    <Textarea 
-                        id="address" 
-                        className="rounded-lg border-input focus:border-primary focus:ring-1 focus:ring-primary"
-                        value={formData.address}
-                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                        placeholder="Enter full address for offline course"
-                        rows={2}
-                    />
-                    {errors.address && <p className="text-destructive text-sm mt-1">{errors.address}</p>}
-                </div>
-            )}
-
-            {/* Row 4: Batch & Dates */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-               <div>
-                <Label htmlFor="batchType" className="form-label">Batch Type *</Label>
-                <Select
-                  value={formData.batchType}
-                  onValueChange={(value) => setFormData({ ...formData, batchType: value })}
-                >
-                  <SelectTrigger className="rounded-lg border-input focus:border-primary focus:ring-1 focus:ring-primary">
-                    <SelectValue placeholder="Select batch type" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-card border-border">
-                    {batchTypes.map((type) => (
-                      <SelectItem key={type} value={type}>{type}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.batchType && <p className="text-destructive text-sm mt-1">{errors.batchType}</p>}
-              </div>
-
-              <div>
-                <Label htmlFor="startDate" className="form-label">Start Date *</Label>
-                <div className="relative">
-                  <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                  <Input
-                    id="startDate"
-                    type="date"
-                    className="pl-10 rounded-lg border-input focus:border-primary focus:ring-1 focus:ring-primary"
-                    value={formData.startDate}
-                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                  />
-                </div>
-                {errors.startDate && <p className="text-destructive text-sm mt-1">{errors.startDate}</p>}
-              </div>
-
-              <div>
-                <Label htmlFor="endDate" className="form-label">End Date *</Label>
-                <div className="relative">
-                  <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                  <Input
-                    id="endDate"
-                    type="date"
-                    className="pl-10 rounded-lg border-input focus:border-primary focus:ring-1 focus:ring-primary"
-                    value={formData.endDate}
-                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                  />
-                </div>
-                {errors.endDate && <p className="text-destructive text-sm mt-1">{errors.endDate}</p>}
-              </div>
+            <div>
+              <Label className="form-label">Mapped Mentor *</Label>
+              <Select
+                value={formData.mentorId}
+                onValueChange={(value) => setFormData((prev) => ({ ...prev, mentorId: value }))}
+                disabled={!formData.courseId || mentorLoading}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={mentorLoading ? "Loading mentors..." : "Select mentor"} />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border max-h-80">
+                  {mentorOptions.map((mentor) => (
+                    <SelectItem key={mentor.id} value={String(mentor.id)}>
+                      {mentor.name} {mentor.specialization ? `• ${mentor.specialization}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.mentorId && <p className="text-destructive text-sm mt-1">{errors.mentorId}</p>}
             </div>
 
-            {/* Row 5: Time & Duration */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                 <div>
-                    <Label htmlFor="startTime" className="form-label">Start Time *</Label>
-                    <div className="relative">
-                        <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                        <Input
-                            id="startTime"
-                            type="time"
-                            className="pl-10 rounded-lg border-input focus:border-primary focus:ring-1 focus:ring-primary"
-                            value={formData.startTime}
-                            onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                        />
-                    </div>
-                    {errors.startTime && <p className="text-destructive text-sm mt-1">{errors.startTime}</p>}
-                 </div>
-                 <div>
-                    <Label htmlFor="endTime" className="form-label">End Time *</Label>
-                    <div className="relative">
-                        <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                        <Input
-                            id="endTime"
-                            type="time"
-                            className="pl-10 rounded-lg border-input focus:border-primary focus:ring-1 focus:ring-primary"
-                            value={formData.endTime}
-                            onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                        />
-                     </div>
-                    {errors.endTime && <p className="text-destructive text-sm mt-1">{errors.endTime}</p>}
-                 </div>
-                 <div>
-                    <Label htmlFor="duration" className="form-label">Duration (days) *</Label>
-                    <Input
-                        id="duration"
-                        type="number"
-                        min="1"
-                        className="rounded-lg border-input focus:border-primary focus:ring-1 focus:ring-primary"
-                        value={formData.duration}
-                        onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                        placeholder="30"
-                    />
-                    {errors.duration && <p className="text-destructive text-sm mt-1">{errors.duration}</p>}
-                </div>
+            <div>
+              <Label className="form-label">Service Type</Label>
+              <Input value={selectedCourse?.serviceType || formData.serviceType} disabled />
             </div>
-
-            {/* Row 6: Status & Brochure */}
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 {/* Status Switch */}
-                 <div className="flex flex-row items-center justify-between rounded-lg border border-border p-4 bg-card/50 h-full">
-                    <div className="space-y-0.5">
-                        <Label htmlFor="isActive" className="text-base font-medium">Course Status</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Make course visible to students.
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Switch
-                            id="isActive"
-                            checked={formData.isActive}
-                            onCheckedChange={(value) => setFormData({ ...formData, isActive: value })}
-                        />
-                        <Label htmlFor="isActive" className="cursor-pointer font-medium min-w-[3.5rem] text-right">
-                            {formData.isActive ? "Active" : "Inactive"}
-                        </Label>
-                    </div>
-                 </div>
-
-                 {/* Brochure Upload */}
-                 <div className="flex flex-col justify-center rounded-lg border border-border p-4 bg-card/50 h-full">
-                    <div className="flex items-center gap-2 mb-2">
-                        <Upload className="w-4 h-4 text-muted-foreground" />
-                        <Label htmlFor="brochure" className="text-base font-medium">Brochure</Label>
-                    </div>
-                    <Input
-                        id="brochure"
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        className="cursor-pointer file:cursor-pointer file:text-primary file:font-medium"
-                        onChange={(e) => {
-                            if (e.target.files && e.target.files[0]) {
-                                setBrochureFile(e.target.files[0]);
-                            }
-                        }}
-                    />
-                    {existingBrochure && (
-                        <p className="text-sm text-muted-foreground mt-2">
-                            Current: <a href={existingBrochure} target="_blank" rel="noreferrer" className="text-primary hover:underline font-medium">View Brochure</a>
-                        </p>
-                    )}
-                 </div>
-             </div>
-
-
-
-
-          {/* Pricing Section - Only this maintains a header and slight separation if needed, but styling kept flat */}
-          <div className="space-y-4 pt-4 border-t border-border">
-            <h3 className="text-lg font-semibold">Pricing by Region</h3>
-            <p className="text-sm text-muted-foreground mb-4">Set fee and discount for each supported region with their respective currencies.</p>
-            
-            <div className="border rounded-md overflow-hidden">
-                <Table>
-                    <TableHeader>
-                        <TableRow className="bg-muted">
-                            <TableHead className="font-semibold text-foreground border">Country/Region</TableHead>
-                            <TableHead className="font-semibold text-foreground border">Currency</TableHead>
-                            <TableHead className="font-semibold text-foreground border">Fee</TableHead>
-                            <TableHead className="font-semibold text-foreground border">Discount (%)</TableHead>
-                            <TableHead className="font-semibold text-foreground border">Final Price</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {formData.countryPricing.map((item, index) => {
-                            const config = countryConfigs.find(c => c.country === item.country);
-                            const symbol = config ? config.symbol : "";
-                            return (
-                            <TableRow key={item.country}>
-                                <TableCell className="font-medium border">{item.country}</TableCell>
-                                <TableCell className="text-muted-foreground border">{item.currency}</TableCell>
-                                <TableCell className="border">
-                                    <div className="flex items-center gap-1">
-                                        <span className="text-muted-foreground text-sm font-medium w-6 text-right">{symbol}</span>
-                                        <Input 
-                                            type="number" 
-                                            placeholder="0.00"
-                                            min="0"
-                                            value={item.fee}
-                                            onChange={(e) => handlePricingChange(index, 'fee', e.target.value)}
-                                            className="w-32 rounded-lg border-input focus:border-primary focus:ring-1 focus:ring-primary"
-                                        />
-                                    </div>
-                                </TableCell>
-                                <TableCell className="border">
-                                    <Input 
-                                        type="number" 
-                                        placeholder="0"
-                                        min="0" 
-                                        max="100"
-                                        value={item.discount}
-                                        onChange={(e) => handlePricingChange(index, 'discount', e.target.value)}
-                                        className="w-32 rounded-lg border-input focus:border-primary focus:ring-1 focus:ring-primary"
-                                    />
-                                </TableCell>
-                                <TableCell className="border">
-                                    <span className="font-semibold text-primary">
-                                        {symbol} : {item.price ? `${item.price}` : '0.00'}
-                                    </span>
-                                </TableCell>
-                            </TableRow>
-                        )})}
-                    </TableBody>
-                </Table>
-            </div>
-            {errors.pricing && <p className="text-destructive text-sm mt-1">{errors.pricing}</p>}
           </div>
 
-          <div className="flex justify-end gap-3 pt-6 border-t border-border">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={() => navigate("/courses")}
-              disabled={loading}
-            >
+          {selectedMentor && (
+            <div className="rounded-xl border border-border bg-muted/30 p-4">
+              <p className="text-sm font-semibold text-foreground">{selectedMentor.name}</p>
+              <p className="text-sm text-muted-foreground">
+                {selectedMentor.designation || "Mentor"} {selectedMentor.specialization ? `• ${selectedMentor.specialization}` : ""}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {selectedMentor.yearsOfExperience ? `${selectedMentor.yearsOfExperience}+ years experience` : "Experienced instructor"}
+                {selectedMentor.rating ? ` • ${selectedMentor.rating.toFixed(1)} rating` : ""}
+              </p>
+            </div>
+          )}
+
+          <div>
+            <Label htmlFor="description" className="form-label">Schedule Description *</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(event) => setFormData((prev) => ({ ...prev, description: event.target.value }))}
+              className="min-h-[120px]"
+              placeholder="Describe the batch, audience, or delivery context"
+            />
+            {errors.description && <p className="text-destructive text-sm mt-1">{errors.description}</p>}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div>
+              <Label className="form-label">Difficulty *</Label>
+              <Select
+                value={formData.difficultyLevel}
+                onValueChange={(value) => setFormData((prev) => ({ ...prev, difficultyLevel: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select difficulty" />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border">
+                  {difficultyLevels.map((level) => (
+                    <SelectItem key={level} value={level}>{level}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.difficultyLevel && <p className="text-destructive text-sm mt-1">{errors.difficultyLevel}</p>}
+            </div>
+
+            <div>
+              <Label className="form-label">Language *</Label>
+              <Select
+                value={formData.language}
+                onValueChange={(value) => setFormData((prev) => ({ ...prev, language: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select language" />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border">
+                  {languages.map((language) => (
+                    <SelectItem key={language} value={language}>{language}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="duration" className="form-label">Duration *</Label>
+              <Input
+                id="duration"
+                type="number"
+                value={formData.duration}
+                onChange={(event) => setFormData((prev) => ({ ...prev, duration: event.target.value }))}
+                placeholder="Days"
+              />
+              {errors.duration && <p className="text-destructive text-sm mt-1">{errors.duration}</p>}
+            </div>
+
+            <div className="flex items-center justify-between rounded-xl border border-border px-4 py-3 mt-6 md:mt-0">
+              <div>
+                <p className="text-sm font-medium">Active schedule</p>
+                <p className="text-xs text-muted-foreground">Control public visibility</p>
+              </div>
+              <Switch
+                checked={formData.isActive}
+                onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, isActive: checked }))}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <Label htmlFor="startDate" className="form-label">Start Date *</Label>
+              <Input
+                id="startDate"
+                type="date"
+                value={formData.startDate}
+                onChange={(event) => setFormData((prev) => ({ ...prev, startDate: event.target.value }))}
+              />
+              {errors.startDate && <p className="text-destructive text-sm mt-1">{errors.startDate}</p>}
+            </div>
+
+            <div>
+              <Label htmlFor="endDate" className="form-label">End Date *</Label>
+              <Input
+                id="endDate"
+                type="date"
+                value={formData.endDate}
+                onChange={(event) => setFormData((prev) => ({ ...prev, endDate: event.target.value }))}
+              />
+              {errors.endDate && <p className="text-destructive text-sm mt-1">{errors.endDate}</p>}
+            </div>
+
+            <div>
+              <Label className="form-label">Batch Type *</Label>
+              <Select
+                value={formData.batchType}
+                onValueChange={(value) => setFormData((prev) => ({ ...prev, batchType: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select batch type" />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border">
+                  {batchTypes.map((type) => (
+                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.batchType && <p className="text-destructive text-sm mt-1">{errors.batchType}</p>}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <Label htmlFor="startTime" className="form-label">Start Time *</Label>
+              <Input
+                id="startTime"
+                type="time"
+                value={formData.startTime}
+                onChange={(event) => setFormData((prev) => ({ ...prev, startTime: event.target.value }))}
+              />
+              {errors.startTime && <p className="text-destructive text-sm mt-1">{errors.startTime}</p>}
+            </div>
+
+            <div>
+              <Label htmlFor="endTime" className="form-label">End Time *</Label>
+              <Input
+                id="endTime"
+                type="time"
+                value={formData.endTime}
+                onChange={(event) => setFormData((prev) => ({ ...prev, endTime: event.target.value }))}
+              />
+              {errors.endTime && <p className="text-destructive text-sm mt-1">{errors.endTime}</p>}
+            </div>
+
+            <div>
+              <Label className="form-label">Course Type *</Label>
+              <Select
+                value={formData.courseType}
+                onValueChange={(value) => setFormData((prev) => ({ ...prev, courseType: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select course type" />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border">
+                  {courseTypes.map((type) => (
+                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.courseType && <p className="text-destructive text-sm mt-1">{errors.courseType}</p>}
+            </div>
+          </div>
+
+          {formData.courseType === "OFFLINE" && (
+            <div>
+              <Label htmlFor="address" className="form-label">Address *</Label>
+              <Textarea
+                id="address"
+                value={formData.address}
+                onChange={(event) => setFormData((prev) => ({ ...prev, address: event.target.value }))}
+                placeholder="Enter classroom or venue address"
+              />
+              {errors.address && <p className="text-destructive text-sm mt-1">{errors.address}</p>}
+            </div>
+          )}
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold">Regional Pricing</h2>
+                <p className="text-sm text-muted-foreground">Configure pricing for each supported market.</p>
+              </div>
+              {errors.pricing && <p className="text-sm text-destructive">{errors.pricing}</p>}
+            </div>
+
+            <div className="rounded-xl border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Country</TableHead>
+                    <TableHead>Currency</TableHead>
+                    <TableHead>Base Fee</TableHead>
+                    <TableHead>Discount %</TableHead>
+                    <TableHead>Final Price</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {formData.countryPricing.map((pricing, index) => (
+                    <TableRow key={pricing.country}>
+                      <TableCell className="font-medium">{pricing.country}</TableCell>
+                      <TableCell>{pricing.currency}</TableCell>
+                      <TableCell>
+                        <Input
+                          value={pricing.fee}
+                          onChange={(event) => handlePricingChange(index, "fee", event.target.value)}
+                          placeholder="0"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          value={pricing.discount}
+                          onChange={(event) => handlePricingChange(index, "discount", event.target.value)}
+                          placeholder="0"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input value={pricing.price} readOnly className="bg-muted/40" />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <Label className="form-label">Brochure</Label>
+            <label className="flex min-h-[120px] cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/30 px-6 py-8 text-center transition-colors hover:border-primary/40">
+              <input
+                type="file"
+                className="hidden"
+                accept=".pdf,.jpg,.jpeg,.png"
+                onChange={(event) => setBrochureFile(event.target.files?.[0] || null)}
+              />
+              <div className="space-y-2">
+                <Upload className="mx-auto h-6 w-6 text-muted-foreground" />
+                <p className="text-sm font-medium text-foreground">
+                  {brochureFile ? brochureFile.name : "Upload brochure"}
+                </p>
+                <p className="text-xs text-muted-foreground">PDF, JPG, JPEG, or PNG up to 10MB</p>
+              </div>
+            </label>
+
+            {existingBrochure && !brochureFile && (
+              <a
+                href={existingBrochure}
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm text-primary hover:underline"
+              >
+                View existing brochure
+              </a>
+            )}
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+            <Button type="button" variant="outline" onClick={() => navigate("/courses")}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? (isEditMode ? "Updating..." : "Creating...") : (isEditMode ? "Update Course" : "Create Course")}
+            <Button type="submit" disabled={loading || catalogLoading}>
+              {loading ? "Saving..." : isEditMode ? "Update Schedule" : "Create Schedule"}
             </Button>
           </div>
         </form>
