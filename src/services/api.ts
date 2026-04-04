@@ -204,6 +204,7 @@ export const importCourses = async (file: File) => {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
+      'X-CMS-App-Token': 'CMS-V3-SECURE-ACCESS',
     },
     body: formData,
   });
