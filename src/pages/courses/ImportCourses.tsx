@@ -10,7 +10,12 @@ const ImportCourses = () => {
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
   const [isUploading, setIsUploading] = useState(false);
-  const [result, setResult] = useState<{ totalRows: number; importedCount: number; failedCount: number } | null>(null);
+  const [result, setResult] = useState<{
+    totalRows: number;
+    importedCount: number;
+    failedCount: number;
+    errors?: string[];
+  } | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -42,6 +47,7 @@ const ImportCourses = () => {
           totalRows: response.data.totalRows || 0,
           importedCount: response.data.importedCount || 0,
           failedCount: response.data.failedCount || 0,
+          errors: response.data.errors || [],
         });
         if ((response.data.importedCount || 0) > 0) {
           setStatus("success");
@@ -80,12 +86,13 @@ const ImportCourses = () => {
                 <ul className="list-disc list-inside space-y-1 text-muted-foreground">
                   <li>File must be in .xls or .xlsx format</li>
                   <li>First row should contain column headers</li>
-                  <li>Required: Course Name, Mentor, Description, Service Type, Fee, Discount</li>
-                  <li>Dates: Start Date, End Date (Format: YYYY-MM-DD)</li>
-                  <li>Times: Start Time, End Time (Format: HH:MM)</li>
-                  <li>Details: Language, Batch Type, Course Type, Address (if Offline)</li>
-                  <li>Pricing: Fee (USA), Discount (USA), Fee (Europe), Discount (Europe), etc.</li>
-                  <li>Brochure: Public Drive URL (must be publicly accessible)</li>
+                  <li>Required fields: Course Name, Mentor, Description, Difficulty Level, Start Date, End Date, Duration, Start Time, End Time, Batch Type, and Course Type</li>
+                  <li>Optional fields: Service Type, Language, Address, Max Participants, Plan Available, Is Active, and Brochure</li>
+                  <li>Dates must be in YYYY-MM-DD format and times in HH:MM format</li>
+                  <li>Batch Type accepts Weekend, Weekday, or Fast Track; Course Type accepts Online or Offline</li>
+                  <li>Plan Available and Is Active accept true/false, yes/no, or 1/0</li>
+                  <li>Pricing columns should match the Add Course screen: Fee, Discount, and Final Price for USA, Canada, Europe, India, Australia, and Singapore</li>
+                  <li>At least one pricing row must have a fee greater than 0</li>
                 </ul>
                 <div className="mt-3">
                   <a
@@ -109,6 +116,24 @@ const ImportCourses = () => {
                 <p className="text-sm text-muted-foreground mt-1">
                   Imported {result?.importedCount ?? 0} of {result?.totalRows ?? 0} rows.
                 </p>
+                {!!result?.failedCount && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    {result.failedCount} row(s) were skipped. Review the row errors before re-importing.
+                  </p>
+                )}
+                {!!result?.errors?.length && (
+                  <div className="mt-4 rounded-lg border border-success/20 bg-background/70 p-4 text-left">
+                    <p className="text-sm font-medium text-foreground">Row issues</p>
+                    <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+                      {result.errors.slice(0, 5).map((error) => (
+                        <p key={error}>{error}</p>
+                      ))}
+                      {result.errors.length > 5 && (
+                        <p>...and {result.errors.length - 5} more row errors.</p>
+                      )}
+                    </div>
+                  </div>
+                )}
                 <Button
                   variant="outline"
                   className="mt-4"
@@ -125,9 +150,24 @@ const ImportCourses = () => {
                   There was an error processing your file. Please check the format and try again.
                 </p>
                 {result && (
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Imported {result.importedCount} of {result.totalRows} rows.
-                  </p>
+                  <>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Imported {result.importedCount} of {result.totalRows} rows.
+                    </p>
+                    {!!result.errors?.length && (
+                      <div className="mt-4 rounded-lg border border-destructive/20 bg-background/70 p-4 text-left">
+                        <p className="text-sm font-medium text-foreground">Row issues</p>
+                        <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+                          {result.errors.slice(0, 5).map((error) => (
+                            <p key={error}>{error}</p>
+                          ))}
+                          {result.errors.length > 5 && (
+                            <p>...and {result.errors.length - 5} more row errors.</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
                 <Button
                   variant="outline"

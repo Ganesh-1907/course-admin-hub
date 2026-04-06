@@ -19,12 +19,21 @@ export const removeAuthToken = () => {
 };
 
 export const setUserData = (userData: any) => {
-  localStorage.setItem(USER_KEY, JSON.stringify(userData));
+  try {
+    localStorage.setItem(USER_KEY, JSON.stringify(userData));
+  } catch (error) {
+    console.error('Error saving user data:', error);
+  }
 };
 
 export const getUserData = () => {
-  const data = localStorage.getItem(USER_KEY);
-  return data ? JSON.parse(data) : null;
+  try {
+    const data = localStorage.getItem(USER_KEY);
+    return data ? JSON.parse(data) : null;
+  } catch (error) {
+    console.error('Error parsing user data:', error);
+    return null;
+  }
 };
 
 // API Request Helper
@@ -142,8 +151,24 @@ export const getAllCourses = async (page = 1, limit = 10, filters?: any) => {
 
   if (filters?.search) params.append('search', filters.search);
   if (filters?.serviceType) params.append('serviceType', filters.serviceType);
+  if (filters?.batchType) params.append('batchType', filters.batchType);
+  if (filters?.courseType) params.append('courseType', filters.courseType);
+  if (filters?.sortBy) params.append('sortBy', filters.sortBy);
+  if (filters?.order) params.append('order', filters.order);
 
   return await apiRequest(`/admin/courses?${params.toString()}`, 'GET');
+};
+
+export const getServiceTypes = async () => {
+  return await apiRequest('/admin/courses/service-types', 'GET');
+};
+
+export const getCourseCatalog = async () => {
+  return await apiRequest('/admin/courses/catalog', 'GET');
+};
+
+export const getMentorsByCourse = async (courseId: string | number) => {
+  return await apiRequest(`/admin/courses/catalog/${courseId}/mentors`, 'GET');
 };
 
 export const getCourseById = async (courseId: string) => {
@@ -179,6 +204,7 @@ export const importCourses = async (file: File) => {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
+      'X-CMS-App-Token': 'CMS-V3-SECURE-ACCESS',
     },
     body: formData,
   });
@@ -296,7 +322,7 @@ export const getDashboardStats = async (filters?: any) => {
   if (filters?.endDate) params.append('endDate', filters.endDate);
 
   return await apiRequest(
-    `/admin/registrations/dashboard/statistics?${params.toString()}`,
+    `/admin/dashboard/stats?${params.toString()}`,
     'GET'
   );
 };

@@ -22,17 +22,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Check if user is already logged in on mount
   useEffect(() => {
     const checkAuth = () => {
-      const storedToken = getAuthToken();
-      const storedUser = getUserData();
+      try {
+        const storedToken = getAuthToken();
+        const storedUser = getUserData();
 
-      if (storedToken && storedUser) {
-        setToken(storedToken);
-        setUser(storedUser);
-        setIsAuthenticated(true);
-      } else {
+        if (storedToken && storedUser) {
+          setToken(storedToken);
+          setUser(storedUser);
+          setIsAuthenticated(true);
+        } else {
+          setIsAuthenticated(false);
+          // Clean up if state is partial
+          if (storedToken || storedUser) {
+            removeAuthToken();
+          }
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
         setIsAuthenticated(false);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     checkAuth();

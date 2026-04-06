@@ -76,10 +76,6 @@ const CourseDetails = () => {
     );
   }
 
-  const finalPrice = course.discountPercentage && course.discountPercentage > 0
-    ? (course.price - (course.price * course.discountPercentage / 100)).toFixed(2)
-    : course.price?.toFixed(2);
-
   return (
     <AdminLayout>
       <div className="max-w-5xl mx-auto space-y-6">
@@ -90,12 +86,12 @@ const CourseDetails = () => {
             Back to Courses
             </Button>
             <div className="flex gap-2">
-                {course.brochure?.url && (
-                    <Button variant="outline" onClick={() => window.open(course.brochure.url, "_blank")} className="gap-2">
+                {(course.brochure?.url || course.brochureUrl) && (
+                    <Button variant="outline" onClick={() => window.open(course.brochure?.url || course.brochureUrl, "_blank")} className="gap-2">
                         View Brochure
                     </Button>
                 )}
-                <Button onClick={() => navigate(`/courses/edit/${id}`)} className="gap-2">
+                <Button onClick={() => navigate(`/courses/${id}/edit`)} className="gap-2">
                     Edit Course
                 </Button>
             </div>
@@ -128,6 +124,9 @@ const CourseDetails = () => {
                 <div className="space-y-1">
                     <p className="text-sm font-medium text-muted-foreground">Mentor</p>
                     <p className="font-semibold text-foreground text-lg">{course.mentor}</p>
+                    {course.mentorProfile?.designation && (
+                      <p className="text-sm text-muted-foreground">{course.mentorProfile.designation}</p>
+                    )}
                 </div>
                 <div className="space-y-1">
                     <p className="text-sm font-medium text-muted-foreground">Language</p>

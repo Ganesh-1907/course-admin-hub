@@ -53,8 +53,14 @@ const Registrations = () => {
 
 
   const handleViewDetail = async (registration: any) => {
+    const regId = registration.id || registration._id;
+    if (!regId) {
+      toast.error("Registration ID not found");
+      return;
+    }
+
     try {
-      const response = await getRegistrationDetail(registration._id);
+      const response = await getRegistrationDetail(regId);
       if (response.success && response.data) {
         setSelectedRegistration(response.data);
         setShowDetail(true);
@@ -173,6 +179,7 @@ const Registrations = () => {
                   <th className="table-header-cell font-bold text-black">Email</th>
                   <th className="table-header-cell font-bold text-black">Mobile</th>
                   <th className="table-header-cell font-bold text-black">Course</th>
+                  <th className="table-header-cell font-bold text-black">Gateway</th>
                   <th className="table-header-cell font-bold text-black">Amount</th>
                   <th className="table-header-cell font-bold text-black">Status</th>
                   <th className="table-header-cell font-bold text-black">Registered Date</th>
@@ -181,19 +188,24 @@ const Registrations = () => {
               </thead>
               <tbody>
                   {registrations.map((reg) => (
-                  <tr key={reg._id} className="border-b border-border hover:bg-muted/50 transition-colors">
-                    <td className="px-4 py-3 text-foreground font-medium">{reg.participantId?.name || "N/A"}</td>
-                    <td className="px-4 py-3 text-foreground">{reg.participantId?.email || "N/A"}</td>
-                    <td className="px-4 py-3 text-foreground">{reg.participantId?.mobile || "N/A"}</td>
-                    <td className="px-4 py-3 text-foreground">{reg.courseId?.courseName || "N/A"}</td>
-                    <td className="px-4 py-3 text-foreground">{reg.currency} {reg.finalAmount || 0}</td>
+                  <tr key={reg.id || reg._id} className="border-b border-border hover:bg-muted/50 transition-colors">
+                    <td className="px-4 py-3 text-foreground font-medium">{reg.userName || "N/A"}</td>
+                    <td className="px-4 py-3 text-foreground">{reg.email || "N/A"}</td>
+                    <td className="px-4 py-3 text-foreground">{reg.mobile || "N/A"}</td>
+                    <td className="px-4 py-3 text-foreground">{reg.courseName || "N/A"}</td>
+                    <td className="px-4 py-3">
+                      <span className="px-2 py-1 rounded-md bg-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                        {reg.paymentGateway || "N/A"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-foreground">{reg.currency} {reg.amountPaid || 0}</td>
                     <td className="px-4 py-3">
                       <span className={
-                        reg.registrationStatus === "COMPLETED" || reg.registrationStatus === "CONFIRMED" ? "font-semibold text-green-600" :
-                        reg.registrationStatus === "CANCELLED" || reg.registrationStatus === "REFUNDED" ? "font-semibold text-red-600" :
+                        reg.status === "COMPLETED" || reg.status === "CONFIRMED" ? "font-semibold text-green-600" :
+                        reg.status === "CANCELLED" || reg.status === "REFUNDED" ? "font-semibold text-red-600" :
                         "font-semibold text-orange-600"
                       }>
-                        {reg.registrationStatus || "PENDING"}
+                        {reg.status || "PENDING"}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-foreground">
@@ -220,9 +232,9 @@ const Registrations = () => {
 
         {/* Pagination */}
         {!loading && registrations.length > 0 && totalPages > 1 && (
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mt-6">
             <p className="text-sm text-muted-foreground">
-              Page {currentPage} of {totalPages}
+              Showing Page {currentPage} of {totalPages}
             </p>
             <div className="flex gap-2">
               <Button
@@ -231,28 +243,39 @@ const Registrations = () => {
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
               >
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft className="w-4 h-4 mr-1" /> Previous
               </Button>
-              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                const page = i + 1;
-                return (
-                  <Button
-                    key={page}
-                    variant={currentPage === page ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setCurrentPage(page)}
-                  >
-                    {page}
-                  </Button>
-                );
-              })}
+              <div className="flex gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(page => {
+                    if (totalPages <= 7) return true;
+                    if (page === 1 || page === totalPages) return true;
+                    if (page >= currentPage - 1 && page <= currentPage + 1) return true;
+                    return false;
+                  })
+                  .map((page, index, array) => (
+                    <div key={page} className="flex gap-1">
+                      {index > 0 && array[index - 1] !== page - 1 && (
+                        <span className="px-2 py-1 text-muted-foreground">...</span>
+                      )}
+                      <Button
+                        variant={currentPage === page ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setCurrentPage(page)}
+                        className="w-9 h-9 p-0"
+                      >
+                        {page}
+                      </Button>
+                    </div>
+                  ))}
+              </div>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
               >
-                <ChevronRight className="w-4 h-4" />
+                Next <ChevronRight className="w-4 h-4 ml-1" />
               </Button>
             </div>
           </div>
@@ -270,32 +293,40 @@ const Registrations = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Participant Name</p>
-                  <p className="font-semibold">{selectedRegistration.participantId?.name || "N/A"}</p>
+                  <p className="font-semibold">{selectedRegistration.userName || "N/A"}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Email</p>
-                  <p className="font-semibold">{selectedRegistration.participantId?.email || "N/A"}</p>
+                  <p className="font-semibold">{selectedRegistration.email || "N/A"}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Mobile</p>
-                  <p className="font-semibold">{selectedRegistration.participantId?.mobile || "N/A"}</p>
+                  <p className="font-semibold">{selectedRegistration.mobile || "N/A"}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Course Name</p>
-                  <p className="font-semibold">{selectedRegistration.courseId?.courseName || "N/A"}</p>
+                  <p className="font-semibold">{selectedRegistration.courseName || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Payment Gateway</p>
+                  <p className="font-semibold">
+                    <span className="px-2 py-1 rounded-md bg-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                      {selectedRegistration.paymentGateway || "N/A"}
+                    </span>
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Amount</p>
-                  <p className="font-semibold">{selectedRegistration.currency} {selectedRegistration.finalAmount || 0}</p>
+                  <p className="font-semibold">{selectedRegistration.currency} {selectedRegistration.amountPaid || 0}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Status</p>
                   <p className={
-                    selectedRegistration.registrationStatus === "COMPLETED" || selectedRegistration.registrationStatus === "CONFIRMED" ? "font-semibold text-green-600" :
-                    selectedRegistration.registrationStatus === "CANCELLED" || selectedRegistration.registrationStatus === "REFUNDED" ? "font-semibold text-red-600" :
+                    selectedRegistration.status === "COMPLETED" || selectedRegistration.status === "CONFIRMED" ? "font-semibold text-green-600" :
+                    selectedRegistration.status === "CANCELLED" || selectedRegistration.status === "REFUNDED" ? "font-semibold text-red-600" :
                     "font-semibold text-orange-600"
                   }>
-                    {selectedRegistration.registrationStatus || "PENDING"}
+                    {selectedRegistration.status || "PENDING"}
                   </p>
                 </div>
                 <div>

@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import Dashboard from "./pages/Dashboard";
@@ -24,16 +25,46 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/login" element={<Login />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/courses" element={<CourseListing />} />
-            <Route path="/courses/add" element={<AddCourse />} />
-            <Route path="/courses/import" element={<ImportCourses />} />
-            <Route path="/courses/:id" element={<CourseDetails />} />
-            <Route path="/courses/:id/edit" element={<AddCourse />} />
-            <Route path="/registrations" element={<Registrations />} />
+            
+            <Route path="/dashboard" element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/courses" element={
+              <ProtectedRoute>
+                <CourseListing />
+              </ProtectedRoute>
+            } />
+            <Route path="/courses/add" element={
+              <ProtectedRoute>
+                <AddCourse />
+              </ProtectedRoute>
+            } />
+            <Route path="/courses/import" element={
+              <ProtectedRoute>
+                <ImportCourses />
+              </ProtectedRoute>
+            } />
+            <Route path="/courses/:id" element={
+              <ProtectedRoute>
+                <CourseDetails />
+              </ProtectedRoute>
+            } />
+            <Route path="/courses/:id/edit" element={
+              <ProtectedRoute>
+                <AddCourse />
+              </ProtectedRoute>
+            } />
+            <Route path="/registrations" element={
+              <ProtectedRoute>
+                <Registrations />
+              </ProtectedRoute>
+            } />
+            
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
