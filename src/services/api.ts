@@ -1,5 +1,8 @@
 // API Service for Course Management Backend
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+import env from '../config/env';
+
+const API_BASE_URL = env.API_BASE_URL;
+const APP_TOKEN = env.APP_TOKEN;
 
 // Store token in localStorage
 const TOKEN_KEY = 'auth_token';
@@ -45,7 +48,7 @@ const apiRequest = async (
 ) => {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
-    'X-CMS-App-Token': 'CMS-V3-SECURE-ACCESS',
+    'X-CMS-App-Token': APP_TOKEN,
   };
 
   // If body is FormData, let browser set Content-Type with boundary
@@ -204,7 +207,7 @@ export const importCourses = async (file: File) => {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
-      'X-CMS-App-Token': 'CMS-V3-SECURE-ACCESS',
+      'X-CMS-App-Token': APP_TOKEN,
     },
     body: formData,
   });
