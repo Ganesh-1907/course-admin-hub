@@ -102,7 +102,7 @@ export const adminLogin = async (email: string, password: string) => {
 
   if (response.data?.token) {
     setAuthToken(response.data.token);
-    setUserData(response.data.admin);
+    setUserData(response.data.user);
   }
 
   return response;
@@ -424,7 +424,7 @@ export const userRegister = async (userData: {
 
   if (response.data?.token) {
     setAuthToken(response.data.token);
-    setUserData(response.data.participant);
+    setUserData(response.data.user);
   }
 
   return response;
@@ -440,7 +440,7 @@ export const userLogin = async (email: string, password: string) => {
 
   if (response.data?.token) {
     setAuthToken(response.data.token);
-    setUserData(response.data.participant);
+    setUserData(response.data.user);
   }
 
   return response;
