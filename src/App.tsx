@@ -12,6 +12,11 @@ import AddCourse from "./pages/courses/AddCourse";
 import ImportCourses from "./pages/courses/ImportCourses";
 import CourseListing from "./pages/courses/CourseListing";
 import CourseDetails from "./pages/courses/CourseDetails";
+import AddMentor from "./pages/mentors/AddMentor";
+import MentorListing from "./pages/mentors/MentorListing";
+import AddWebinar from "./pages/webinars/AddWebinar";
+import WebinarDetails from "./pages/webinars/WebinarDetails";
+import WebinarListing from "./pages/webinars/WebinarListing";
 import Registrations from "./pages/Registrations";
 import NotFound from "./pages/NotFound";
 
@@ -62,6 +67,36 @@ const App = () => (
             <Route path="/registrations" element={
               <ProtectedRoute>
                 <Registrations />
+              </ProtectedRoute>
+            } />
+            <Route path="/mentors" element={
+              <ProtectedRoute>
+                <MentorListing />
+              </ProtectedRoute>
+            } />
+            <Route path="/mentors/add" element={
+              <ProtectedRoute>
+                <AddMentor />
+              </ProtectedRoute>
+            } />
+            <Route path="/mentors/:id/edit" element={
+              <ProtectedRoute>
+                <AddMentor />
+              </ProtectedRoute>
+            } />
+            <Route path="/webinars" element={
+              <ProtectedRoute>
+                <WebinarListing />
+              </ProtectedRoute>
+            } />
+            <Route path="/webinars/:id" element={
+              <ProtectedRoute>
+                <WebinarDetails />
+              </ProtectedRoute>
+            } />
+            <Route path="/webinars/add" element={
+              <ProtectedRoute>
+                <AddWebinar />
               </ProtectedRoute>
             } />
             

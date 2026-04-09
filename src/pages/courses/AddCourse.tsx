@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { COUNTRY_CONFIGS } from "@/constants/countries";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -30,15 +31,6 @@ const batchTypes = [
   { value: "WEEKDAY", label: "Weekdays" },
 ];
 const courseTypes = ["ONLINE", "OFFLINE"];
-
-const countryConfigs = [
-  { country: "USA", currency: "USD", symbol: "$" },
-  { country: "Canada", currency: "CAD", symbol: "C$" },
-  { country: "Europe", currency: "EUR", symbol: "EUR" },
-  { country: "India", currency: "INR", symbol: "Rs" },
-  { country: "Australia", currency: "AUD", symbol: "A$" },
-  { country: "Singapore", currency: "SGD", symbol: "S$" },
-];
 
 interface CountryPricing {
   country: string;
@@ -64,7 +56,7 @@ interface MentorOption {
   photoUrl?: string;
 }
 
-const buildDefaultPricing = (): CountryPricing[] => countryConfigs.map((config) => ({
+const buildDefaultPricing = (): CountryPricing[] => COUNTRY_CONFIGS.map((config) => ({
   country: config.country,
   currency: config.currency,
   fee: "",

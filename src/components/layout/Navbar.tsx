@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ChevronDown, LogOut, User, BookOpen, LayoutDashboard, Users, Plus, Upload, List } from "lucide-react";
+import { ChevronDown, LogOut, User, BookOpen, LayoutDashboard, Users, Plus, Upload, List, UserPlus, Video } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +27,8 @@ const Navbar = () => {
 
   const isActive = (path: string) => location.pathname === path;
   const isCoursesActive = location.pathname.startsWith("/courses");
+  const isMentorsActive = location.pathname.startsWith("/mentors");
+  const isWebinarsActive = location.pathname.startsWith("/webinars");
 
   const handleLogout = () => {
     setShowLogoutDialog(false);
@@ -98,6 +100,64 @@ const Navbar = () => {
                 <Users className="w-4 h-4" />
                 Registrations
               </Link>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className={cn(
+                      "nav-link flex items-center gap-2",
+                      isMentorsActive && "nav-link-active"
+                    )}
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    Mentors
+                    <ChevronDown className="w-4 h-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center" className="w-48 bg-card border-border">
+                  <DropdownMenuItem asChild>
+                    <Link to="/mentors/add" className="flex items-center gap-2 cursor-pointer">
+                      <UserPlus className="w-4 h-4" />
+                      Add Mentor
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/mentors" className="flex items-center gap-2 cursor-pointer">
+                      <List className="w-4 h-4" />
+                      List Mentor
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className={cn(
+                      "nav-link flex items-center gap-2",
+                      isWebinarsActive && "nav-link-active"
+                    )}
+                  >
+                    <Video className="w-4 h-4" />
+                    Webinars
+                    <ChevronDown className="w-4 h-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center" className="w-48 bg-card border-border">
+                  <DropdownMenuItem asChild>
+                    <Link to="/webinars/add" className="flex items-center gap-2 cursor-pointer">
+                      <Plus className="w-4 h-4" />
+                      Add Webinar
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/webinars" className="flex items-center gap-2 cursor-pointer">
+                      <List className="w-4 h-4" />
+                      List Webinar
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
             {/* Right Side */}
@@ -149,6 +209,18 @@ const Navbar = () => {
             className={cn("p-2 rounded-lg transition-colors", isActive("/registrations") ? "bg-secondary text-primary" : "text-muted-foreground")}
           >
             <Users className="w-5 h-5" />
+          </Link>
+          <Link
+            to="/mentors"
+            className={cn("p-2 rounded-lg transition-colors", isMentorsActive ? "bg-secondary text-primary" : "text-muted-foreground")}
+          >
+            <UserPlus className="w-5 h-5" />
+          </Link>
+          <Link
+            to="/webinars"
+            className={cn("p-2 rounded-lg transition-colors", isWebinarsActive ? "bg-secondary text-primary" : "text-muted-foreground")}
+          >
+            <Video className="w-5 h-5" />
           </Link>
         </div>
       </nav>
