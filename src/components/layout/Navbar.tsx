@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ChevronDown, LogOut, User, BookOpen, LayoutDashboard, Users, Plus, Upload, List, MessageSquare} from "lucide-react";
+import { ChevronDown, LogOut, User, BookOpen, LayoutDashboard, Users, Plus, Upload, List, MessageSquare, Briefcase } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -107,6 +107,14 @@ const Navbar = () => {
                 <MessageSquare className="w-4 h-4" />
                 Enquiries
               </Link>
+
+              <Link
+                to="/careers"
+                className={cn("nav-link flex items-center gap-2", location.pathname.startsWith("/careers") && "nav-link-active")}
+              >
+                <Briefcase className="w-4 h-4" />
+                Careers
+              </Link>
             </div>
 
             {/* Right Side */}
@@ -164,6 +172,12 @@ const Navbar = () => {
             className={cn("p-2 rounded-lg transition-colors", isEnquiriesActive ? "bg-secondary text-primary" : "text-muted-foreground")}
           >
             <MessageSquare className="w-5 h-5" />
+          </Link>
+          <Link
+            to="/careers"
+            className={cn("p-2 rounded-lg transition-colors", location.pathname.startsWith("/careers") ? "bg-secondary text-primary" : "text-muted-foreground")}
+          >
+            <Briefcase className="w-5 h-5" />
           </Link>
         </div>
       </nav>
