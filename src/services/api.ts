@@ -641,6 +641,48 @@ export const downloadCertificate = async (registrationId: string) => {
   );
 };
 
+// ==================== CAREERS MANAGEMENT ====================
+
+export const getAllCareersAction = async (page = 1, limit = 10, filters?: any) => {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+  });
+
+  if (filters?.search) params.append('search', filters.search);
+  if (filters?.status) params.append('status', filters.status);
+
+  return await apiRequest(`/admin/careers?${params.toString()}`, 'GET');
+};
+
+export const createCareer = async (careerData: any) => {
+  return await apiRequest('/admin/careers', 'POST', careerData);
+};
+
+export const updateCareer = async (id: string | number, careerData: any) => {
+  return await apiRequest(`/admin/careers/${id}`, 'PUT', careerData);
+};
+
+export const deleteCareer = async (id: string | number) => {
+  return await apiRequest(`/admin/careers/${id}`, 'DELETE');
+};
+
+export const getAllApplications = async (page = 1, limit = 10, filters?: any) => {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+  });
+
+  if (filters?.jobId) params.append('jobId', filters.jobId);
+  if (filters?.status) params.append('status', filters.status);
+
+  return await apiRequest(`/admin/careers/applications?${params.toString()}`, 'GET');
+};
+
+export const updateApplicationStatus = async (id: string | number, status: string) => {
+  return await apiRequest(`/admin/careers/applications/${id}/status`, 'PATCH', { status });
+};
+
 // ==================== HEALTH CHECK ====================
 
 export const checkApiHealth = async () => {

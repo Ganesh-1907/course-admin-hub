@@ -109,6 +109,14 @@ const Navbar = () => {
                 <MessageSquare className="w-4 h-4" />
                 Enquiries
               </Link>
+
+              <Link
+                to="/careers"
+                className={cn("nav-link flex items-center gap-2", location.pathname.startsWith("/careers") && "nav-link-active")}
+              >
+                <Briefcase className="w-4 h-4" />
+                Careers
+              </Link>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
@@ -233,6 +241,12 @@ const Navbar = () => {
             className={cn("p-2 rounded-lg transition-colors", isWebinarsActive ? "bg-secondary text-primary" : "text-muted-foreground")}
           >
             <Video className="w-5 h-5" />
+          </Link>
+          <Link
+            to="/careers"
+            className={cn("p-2 rounded-lg transition-colors", location.pathname.startsWith("/careers") ? "bg-secondary text-primary" : "text-muted-foreground")}
+          >
+            <Briefcase className="w-5 h-5" />
           </Link>
         </div>
       </nav>

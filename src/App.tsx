@@ -19,6 +19,9 @@ import WebinarDetails from "./pages/webinars/WebinarDetails";
 import WebinarListing from "./pages/webinars/WebinarListing";
 import Registrations from "./pages/Registrations";
 import Enquiries from "./pages/Enquiries";
+import CareerListing from "./pages/careers/CareerListing";
+import AddCareer from "./pages/careers/AddCareer";
+import Applications from "./pages/careers/Applications";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -101,6 +104,26 @@ const App = () => (
             <Route path="/webinars/add" element={
               <ProtectedRoute>
                 <AddWebinar />
+              </ProtectedRoute>
+            } />
+            <Route path="/careers" element={
+              <ProtectedRoute>
+                <CareerListing />
+              </ProtectedRoute>
+            } />
+            <Route path="/careers/add" element={
+              <ProtectedRoute>
+                <AddCareer />
+              </ProtectedRoute>
+            } />
+            <Route path="/careers/edit/:id" element={
+              <ProtectedRoute>
+                <AddCareer />
+              </ProtectedRoute>
+            } />
+            <Route path="/careers/applications" element={
+              <ProtectedRoute>
+                <Applications />
               </ProtectedRoute>
             } />
             
