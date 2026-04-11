@@ -13,6 +13,7 @@ import ImportCourses from "./pages/courses/ImportCourses";
 import CourseListing from "./pages/courses/CourseListing";
 import CourseDetails from "./pages/courses/CourseDetails";
 import Registrations from "./pages/Registrations";
+import Enquiries from "./pages/Enquiries";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -62,6 +63,11 @@ const App = () => (
             <Route path="/registrations" element={
               <ProtectedRoute>
                 <Registrations />
+              </ProtectedRoute>
+            } />
+            <Route path="/enquiries" element={
+              <ProtectedRoute>
+                <Enquiries />
               </ProtectedRoute>
             } />
             
