@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ChevronDown, LogOut, User, BookOpen, LayoutDashboard, Users, Plus, Upload, List, MessageSquare } from "lucide-react";
+import { ChevronDown, LogOut, User, BookOpen, LayoutDashboard, Users, Plus, Upload, List, MessageSquare ,UserPlus, Video } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
