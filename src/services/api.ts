@@ -1,5 +1,7 @@
 // API Service for Course Management Backend
 import env from '../config/env';
+import type { MentorPayload } from '../types/mentor';
+import type { WebinarPayload } from '../types/webinar';
 
 const API_BASE_URL = env.API_BASE_URL;
 const APP_TOKEN = env.APP_TOKEN;
@@ -218,6 +220,76 @@ export const importCourses = async (file: File) => {
   }
 
   return await response.json();
+};
+
+// ==================== MENTORS MANAGEMENT ====================
+
+export const createMentor = async (mentorData: MentorPayload) => {
+  return await apiRequest('/admin/mentors', 'POST', mentorData);
+};
+
+export const getAllMentors = async (
+  page = 1,
+  limit = 10,
+  filters?: {
+    search?: string;
+    isActive?: boolean;
+    sortBy?: string;
+    order?: 'ASC' | 'DESC';
+  },
+) => {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+  });
+
+  if (filters?.search) params.append('search', filters.search);
+  if (filters?.isActive !== undefined) params.append('isActive', String(filters.isActive));
+  if (filters?.sortBy) params.append('sortBy', filters.sortBy);
+  if (filters?.order) params.append('order', filters.order);
+
+  return await apiRequest(`/admin/mentors?${params.toString()}`, 'GET');
+};
+
+export const getMentorById = async (mentorId: string) => {
+  return await apiRequest(`/admin/mentors/${mentorId}`, 'GET');
+};
+
+export const updateMentor = async (mentorId: string, mentorData: Partial<MentorPayload>) => {
+  return await apiRequest(`/admin/mentors/${mentorId}`, 'PUT', mentorData);
+};
+
+// ==================== WEBINARS MANAGEMENT ====================
+
+export const createWebinar = async (webinarData: WebinarPayload) => {
+  return await apiRequest('/admin/webinars', 'POST', webinarData);
+};
+
+export const getAllWebinars = async (
+  page = 1,
+  limit = 10,
+  filters?: {
+    search?: string;
+    location?: string;
+    sortBy?: string;
+    order?: 'ASC' | 'DESC';
+  },
+) => {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+  });
+
+  if (filters?.search) params.append('search', filters.search);
+  if (filters?.location) params.append('location', filters.location);
+  if (filters?.sortBy) params.append('sortBy', filters.sortBy);
+  if (filters?.order) params.append('order', filters.order);
+
+  return await apiRequest(`/admin/webinars?${params.toString()}`, 'GET');
+};
+
+export const getWebinarById = async (webinarId: string) => {
+  return await apiRequest(`/admin/webinars/${webinarId}`, 'GET');
 };
 
 // ==================== REGISTRATIONS MANAGEMENT ====================
