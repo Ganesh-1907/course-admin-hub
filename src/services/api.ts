@@ -402,6 +402,40 @@ export const getDashboardStats = async (filters?: any) => {
   );
 };
 
+// ==================== ENQUIRIES MANAGEMENT ====================
+
+export const getAllEnquiries = async (
+  page = 1,
+  limit = 10,
+  filters?: { search?: string; status?: string; enquiryType?: string }
+) => {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+  });
+
+  if (filters?.search) params.append('search', filters.search);
+  if (filters?.status) params.append('status', filters.status);
+  if (filters?.enquiryType) params.append('enquiryType', filters.enquiryType);
+
+  return await apiRequest(`/admin/enquiries?${params.toString()}`, 'GET');
+};
+
+export const getEnquiryById = async (id: string) => {
+  return await apiRequest(`/admin/enquiries/${id}`, 'GET');
+};
+
+export const updateEnquiryStatus = async (
+  id: string,
+  data: { status?: string; adminNotes?: string; contactedAt?: string }
+) => {
+  return await apiRequest(`/admin/enquiries/${id}`, 'PATCH', data);
+};
+
+export const deleteEnquiry = async (id: string) => {
+  return await apiRequest(`/admin/enquiries/${id}`, 'DELETE');
+};
+
 // ==================== PUBLIC COURSES (No Auth Required) ====================
 
 export const getPublicCourses = async (page = 1, limit = 10, filters?: any) => {

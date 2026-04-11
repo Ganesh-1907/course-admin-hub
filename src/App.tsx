@@ -18,6 +18,7 @@ import AddWebinar from "./pages/webinars/AddWebinar";
 import WebinarDetails from "./pages/webinars/WebinarDetails";
 import WebinarListing from "./pages/webinars/WebinarListing";
 import Registrations from "./pages/Registrations";
+import Enquiries from "./pages/Enquiries";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -69,6 +70,9 @@ const App = () => (
                 <Registrations />
               </ProtectedRoute>
             } />
+            <Route path="/enquiries" element={
+              <ProtectedRoute>
+                <Enquiries />
             <Route path="/mentors" element={
               <ProtectedRoute>
                 <MentorListing />

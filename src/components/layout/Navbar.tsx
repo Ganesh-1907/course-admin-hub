@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ChevronDown, LogOut, User, BookOpen, LayoutDashboard, Users, Plus, Upload, List, UserPlus, Video } from "lucide-react";
+import { ChevronDown, LogOut, User, BookOpen, LayoutDashboard, Users, Plus, Upload, List, MessageSquare ,UserPlus, Video } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +27,7 @@ const Navbar = () => {
 
   const isActive = (path: string) => location.pathname === path;
   const isCoursesActive = location.pathname.startsWith("/courses");
+  const isEnquiriesActive = location.pathname.startsWith("/enquiries");
   const isMentorsActive = location.pathname.startsWith("/mentors");
   const isWebinarsActive = location.pathname.startsWith("/webinars");
 
@@ -101,6 +102,13 @@ const Navbar = () => {
                 Registrations
               </Link>
 
+              <Link
+                to="/enquiries"
+                className={cn("nav-link flex items-center gap-2", isEnquiriesActive && "nav-link-active")}
+              >
+                <MessageSquare className="w-4 h-4" />
+                Enquiries
+              </Link>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
@@ -211,6 +219,10 @@ const Navbar = () => {
             <Users className="w-5 h-5" />
           </Link>
           <Link
+            to="/enquiries"
+            className={cn("p-2 rounded-lg transition-colors", isEnquiriesActive ? "bg-secondary text-primary" : "text-muted-foreground")}
+          >
+            <MessageSquare className="w-5 h-5" />
             to="/mentors"
             className={cn("p-2 rounded-lg transition-colors", isMentorsActive ? "bg-secondary text-primary" : "text-muted-foreground")}
           >
