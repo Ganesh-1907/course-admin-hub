@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ChevronDown, LogOut, User, BookOpen, LayoutDashboard, Users, Plus, Upload, List } from "lucide-react";
+import { ChevronDown, LogOut, User, BookOpen, LayoutDashboard, Users, Plus, Upload, List, MessageSquare } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +27,7 @@ const Navbar = () => {
 
   const isActive = (path: string) => location.pathname === path;
   const isCoursesActive = location.pathname.startsWith("/courses");
+  const isEnquiriesActive = location.pathname.startsWith("/enquiries");
 
   const handleLogout = () => {
     setShowLogoutDialog(false);
@@ -98,6 +99,14 @@ const Navbar = () => {
                 <Users className="w-4 h-4" />
                 Registrations
               </Link>
+
+              <Link
+                to="/enquiries"
+                className={cn("nav-link flex items-center gap-2", isEnquiriesActive && "nav-link-active")}
+              >
+                <MessageSquare className="w-4 h-4" />
+                Enquiries
+              </Link>
             </div>
 
             {/* Right Side */}
@@ -149,6 +158,12 @@ const Navbar = () => {
             className={cn("p-2 rounded-lg transition-colors", isActive("/registrations") ? "bg-secondary text-primary" : "text-muted-foreground")}
           >
             <Users className="w-5 h-5" />
+          </Link>
+          <Link
+            to="/enquiries"
+            className={cn("p-2 rounded-lg transition-colors", isEnquiriesActive ? "bg-secondary text-primary" : "text-muted-foreground")}
+          >
+            <MessageSquare className="w-5 h-5" />
           </Link>
         </div>
       </nav>
