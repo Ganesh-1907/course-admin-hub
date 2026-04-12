@@ -231,6 +231,8 @@ const Navbar = () => {
             className={cn("p-2 rounded-lg transition-colors", isEnquiriesActive ? "bg-secondary text-primary" : "text-muted-foreground")}
           >
             <MessageSquare className="w-5 h-5" />
+          </Link>
+          <Link
             to="/mentors"
             className={cn("p-2 rounded-lg transition-colors", isMentorsActive ? "bg-secondary text-primary" : "text-muted-foreground")}
           >

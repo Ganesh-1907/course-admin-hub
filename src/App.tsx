@@ -76,6 +76,8 @@ const App = () => (
             <Route path="/enquiries" element={
               <ProtectedRoute>
                 <Enquiries />
+              </ProtectedRoute>
+            } />
             <Route path="/mentors" element={
               <ProtectedRoute>
                 <MentorListing />
