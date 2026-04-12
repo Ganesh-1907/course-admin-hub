@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ChevronDown, LogOut, User, BookOpen, LayoutDashboard, Users, Plus, Upload, List } from "lucide-react";
+import { ChevronDown, LogOut, User, BookOpen, LayoutDashboard, Users, Plus, Upload, List, MessageSquare ,UserPlus, Video ,Briefcase} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +27,9 @@ const Navbar = () => {
 
   const isActive = (path: string) => location.pathname === path;
   const isCoursesActive = location.pathname.startsWith("/courses");
+  const isEnquiriesActive = location.pathname.startsWith("/enquiries");
+  const isMentorsActive = location.pathname.startsWith("/mentors");
+  const isWebinarsActive = location.pathname.startsWith("/webinars");
 
   const handleLogout = () => {
     setShowLogoutDialog(false);
@@ -43,7 +46,7 @@ const Navbar = () => {
               <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
                 <BookOpen className="w-6 h-6 text-primary-foreground" />
               </div>
-              <span className="text-xl font-bold text-foreground hidden sm:block">CourseAdmin</span>
+              <span className="text-xl font-bold text-foreground hidden sm:block">Viovn Admin Dashboard</span>
             </Link>
 
             {/* Center Menu */}
@@ -98,6 +101,79 @@ const Navbar = () => {
                 <Users className="w-4 h-4" />
                 Registrations
               </Link>
+
+              <Link
+                to="/enquiries"
+                className={cn("nav-link flex items-center gap-2", isEnquiriesActive && "nav-link-active")}
+              >
+                <MessageSquare className="w-4 h-4" />
+                Enquiries
+              </Link>
+
+              <Link
+                to="/careers"
+                className={cn("nav-link flex items-center gap-2", location.pathname.startsWith("/careers") && "nav-link-active")}
+              >
+                <Briefcase className="w-4 h-4" />
+                Careers
+              </Link>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className={cn(
+                      "nav-link flex items-center gap-2",
+                      isMentorsActive && "nav-link-active"
+                    )}
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    Mentors
+                    <ChevronDown className="w-4 h-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center" className="w-48 bg-card border-border">
+                  <DropdownMenuItem asChild>
+                    <Link to="/mentors/add" className="flex items-center gap-2 cursor-pointer">
+                      <UserPlus className="w-4 h-4" />
+                      Add Mentor
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/mentors" className="flex items-center gap-2 cursor-pointer">
+                      <List className="w-4 h-4" />
+                      List Mentor
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className={cn(
+                      "nav-link flex items-center gap-2",
+                      isWebinarsActive && "nav-link-active"
+                    )}
+                  >
+                    <Video className="w-4 h-4" />
+                    Webinars
+                    <ChevronDown className="w-4 h-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center" className="w-48 bg-card border-border">
+                  <DropdownMenuItem asChild>
+                    <Link to="/webinars/add" className="flex items-center gap-2 cursor-pointer">
+                      <Plus className="w-4 h-4" />
+                      Add Webinar
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/webinars" className="flex items-center gap-2 cursor-pointer">
+                      <List className="w-4 h-4" />
+                      List Webinar
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
             {/* Right Side */}
@@ -149,6 +225,28 @@ const Navbar = () => {
             className={cn("p-2 rounded-lg transition-colors", isActive("/registrations") ? "bg-secondary text-primary" : "text-muted-foreground")}
           >
             <Users className="w-5 h-5" />
+          </Link>
+          <Link
+            to="/enquiries"
+            className={cn("p-2 rounded-lg transition-colors", isEnquiriesActive ? "bg-secondary text-primary" : "text-muted-foreground")}
+          >
+            <MessageSquare className="w-5 h-5" />
+            to="/mentors"
+            className={cn("p-2 rounded-lg transition-colors", isMentorsActive ? "bg-secondary text-primary" : "text-muted-foreground")}
+          >
+            <UserPlus className="w-5 h-5" />
+          </Link>
+          <Link
+            to="/webinars"
+            className={cn("p-2 rounded-lg transition-colors", isWebinarsActive ? "bg-secondary text-primary" : "text-muted-foreground")}
+          >
+            <Video className="w-5 h-5" />
+          </Link>
+          <Link
+            to="/careers"
+            className={cn("p-2 rounded-lg transition-colors", location.pathname.startsWith("/careers") ? "bg-secondary text-primary" : "text-muted-foreground")}
+          >
+            <Briefcase className="w-5 h-5" />
           </Link>
         </div>
       </nav>

@@ -1,5 +1,10 @@
 // API Service for Course Management Backend
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+import env from '../config/env';
+import type { MentorPayload } from '../types/mentor';
+import type { WebinarPayload } from '../types/webinar';
+
+const API_BASE_URL = env.API_BASE_URL;
+const APP_TOKEN = env.APP_TOKEN;
 
 // Store token in localStorage
 const TOKEN_KEY = 'auth_token';
@@ -19,12 +24,21 @@ export const removeAuthToken = () => {
 };
 
 export const setUserData = (userData: any) => {
-  localStorage.setItem(USER_KEY, JSON.stringify(userData));
+  try {
+    localStorage.setItem(USER_KEY, JSON.stringify(userData));
+  } catch (error) {
+    console.error('Error saving user data:', error);
+  }
 };
 
 export const getUserData = () => {
-  const data = localStorage.getItem(USER_KEY);
-  return data ? JSON.parse(data) : null;
+  try {
+    const data = localStorage.getItem(USER_KEY);
+    return data ? JSON.parse(data) : null;
+  } catch (error) {
+    console.error('Error parsing user data:', error);
+    return null;
+  }
 };
 
 // API Request Helper
@@ -36,7 +50,7 @@ const apiRequest = async (
 ) => {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
-    'X-CMS-App-Token': 'CMS-V3-SECURE-ACCESS',
+    'X-CMS-App-Token': APP_TOKEN,
   };
 
   // If body is FormData, let browser set Content-Type with boundary
@@ -90,7 +104,7 @@ export const adminLogin = async (email: string, password: string) => {
 
   if (response.data?.token) {
     setAuthToken(response.data.token);
-    setUserData(response.data.admin);
+    setUserData(response.data.user);
   }
 
   return response;
@@ -142,8 +156,24 @@ export const getAllCourses = async (page = 1, limit = 10, filters?: any) => {
 
   if (filters?.search) params.append('search', filters.search);
   if (filters?.serviceType) params.append('serviceType', filters.serviceType);
+  if (filters?.batchType) params.append('batchType', filters.batchType);
+  if (filters?.courseType) params.append('courseType', filters.courseType);
+  if (filters?.sortBy) params.append('sortBy', filters.sortBy);
+  if (filters?.order) params.append('order', filters.order);
 
   return await apiRequest(`/admin/courses?${params.toString()}`, 'GET');
+};
+
+export const getServiceTypes = async () => {
+  return await apiRequest('/admin/courses/service-types', 'GET');
+};
+
+export const getCourseCatalog = async () => {
+  return await apiRequest('/admin/courses/catalog', 'GET');
+};
+
+export const getMentorsByCourse = async (courseId: string | number) => {
+  return await apiRequest(`/admin/courses/catalog/${courseId}/mentors`, 'GET');
 };
 
 export const getCourseById = async (courseId: string) => {
@@ -179,6 +209,7 @@ export const importCourses = async (file: File) => {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
+      'X-CMS-App-Token': APP_TOKEN,
     },
     body: formData,
   });
@@ -189,6 +220,76 @@ export const importCourses = async (file: File) => {
   }
 
   return await response.json();
+};
+
+// ==================== MENTORS MANAGEMENT ====================
+
+export const createMentor = async (mentorData: MentorPayload) => {
+  return await apiRequest('/admin/mentors', 'POST', mentorData);
+};
+
+export const getAllMentors = async (
+  page = 1,
+  limit = 10,
+  filters?: {
+    search?: string;
+    isActive?: boolean;
+    sortBy?: string;
+    order?: 'ASC' | 'DESC';
+  },
+) => {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+  });
+
+  if (filters?.search) params.append('search', filters.search);
+  if (filters?.isActive !== undefined) params.append('isActive', String(filters.isActive));
+  if (filters?.sortBy) params.append('sortBy', filters.sortBy);
+  if (filters?.order) params.append('order', filters.order);
+
+  return await apiRequest(`/admin/mentors?${params.toString()}`, 'GET');
+};
+
+export const getMentorById = async (mentorId: string) => {
+  return await apiRequest(`/admin/mentors/${mentorId}`, 'GET');
+};
+
+export const updateMentor = async (mentorId: string, mentorData: Partial<MentorPayload>) => {
+  return await apiRequest(`/admin/mentors/${mentorId}`, 'PUT', mentorData);
+};
+
+// ==================== WEBINARS MANAGEMENT ====================
+
+export const createWebinar = async (webinarData: WebinarPayload) => {
+  return await apiRequest('/admin/webinars', 'POST', webinarData);
+};
+
+export const getAllWebinars = async (
+  page = 1,
+  limit = 10,
+  filters?: {
+    search?: string;
+    location?: string;
+    sortBy?: string;
+    order?: 'ASC' | 'DESC';
+  },
+) => {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+  });
+
+  if (filters?.search) params.append('search', filters.search);
+  if (filters?.location) params.append('location', filters.location);
+  if (filters?.sortBy) params.append('sortBy', filters.sortBy);
+  if (filters?.order) params.append('order', filters.order);
+
+  return await apiRequest(`/admin/webinars?${params.toString()}`, 'GET');
+};
+
+export const getWebinarById = async (webinarId: string) => {
+  return await apiRequest(`/admin/webinars/${webinarId}`, 'GET');
 };
 
 // ==================== REGISTRATIONS MANAGEMENT ====================
@@ -296,9 +397,43 @@ export const getDashboardStats = async (filters?: any) => {
   if (filters?.endDate) params.append('endDate', filters.endDate);
 
   return await apiRequest(
-    `/admin/registrations/dashboard/statistics?${params.toString()}`,
+    `/admin/dashboard/stats?${params.toString()}`,
     'GET'
   );
+};
+
+// ==================== ENQUIRIES MANAGEMENT ====================
+
+export const getAllEnquiries = async (
+  page = 1,
+  limit = 10,
+  filters?: { search?: string; status?: string; enquiryType?: string }
+) => {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+  });
+
+  if (filters?.search) params.append('search', filters.search);
+  if (filters?.status) params.append('status', filters.status);
+  if (filters?.enquiryType) params.append('enquiryType', filters.enquiryType);
+
+  return await apiRequest(`/admin/enquiries?${params.toString()}`, 'GET');
+};
+
+export const getEnquiryById = async (id: string) => {
+  return await apiRequest(`/admin/enquiries/${id}`, 'GET');
+};
+
+export const updateEnquiryStatus = async (
+  id: string,
+  data: { status?: string; adminNotes?: string; contactedAt?: string }
+) => {
+  return await apiRequest(`/admin/enquiries/${id}`, 'PATCH', data);
+};
+
+export const deleteEnquiry = async (id: string) => {
+  return await apiRequest(`/admin/enquiries/${id}`, 'DELETE');
 };
 
 // ==================== PUBLIC COURSES (No Auth Required) ====================
@@ -395,7 +530,7 @@ export const userRegister = async (userData: {
 
   if (response.data?.token) {
     setAuthToken(response.data.token);
-    setUserData(response.data.participant);
+    setUserData(response.data.user);
   }
 
   return response;
@@ -411,7 +546,7 @@ export const userLogin = async (email: string, password: string) => {
 
   if (response.data?.token) {
     setAuthToken(response.data.token);
-    setUserData(response.data.participant);
+    setUserData(response.data.user);
   }
 
   return response;
@@ -504,6 +639,48 @@ export const downloadCertificate = async (registrationId: string) => {
     `/user/registrations/${registrationId}/certificate`,
     'GET'
   );
+};
+
+// ==================== CAREERS MANAGEMENT ====================
+
+export const getAllCareersAction = async (page = 1, limit = 10, filters?: any) => {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+  });
+
+  if (filters?.search) params.append('search', filters.search);
+  if (filters?.status) params.append('status', filters.status);
+
+  return await apiRequest(`/admin/careers?${params.toString()}`, 'GET');
+};
+
+export const createCareer = async (careerData: any) => {
+  return await apiRequest('/admin/careers', 'POST', careerData);
+};
+
+export const updateCareer = async (id: string | number, careerData: any) => {
+  return await apiRequest(`/admin/careers/${id}`, 'PUT', careerData);
+};
+
+export const deleteCareer = async (id: string | number) => {
+  return await apiRequest(`/admin/careers/${id}`, 'DELETE');
+};
+
+export const getAllApplications = async (page = 1, limit = 10, filters?: any) => {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+  });
+
+  if (filters?.jobId) params.append('jobId', filters.jobId);
+  if (filters?.status) params.append('status', filters.status);
+
+  return await apiRequest(`/admin/careers/applications?${params.toString()}`, 'GET');
+};
+
+export const updateApplicationStatus = async (id: string | number, status: string) => {
+  return await apiRequest(`/admin/careers/applications/${id}/status`, 'PATCH', { status });
 };
 
 // ==================== HEALTH CHECK ====================

@@ -6,9 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { adminLogin } from "@/services/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Login = () => {
   const navigate = useNavigate();
+  const { login: handleLogin } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -37,14 +39,13 @@ const Login = () => {
 
     setLoading(true);
     try {
-      const response = await adminLogin(formData.email, formData.password);
+      const success = await handleLogin(formData.email, formData.password);
       
-      if (response.success) {
-        toast.success("Login successful! Welcome back.");
+      if (success) {
+        // toast is already handled in AuthContext.login
         navigate("/dashboard");
-      } else {
-        toast.error(response.message || "Login failed");
       }
+      // error is already handled in AuthContext.login
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Login failed. Please try again.";
       toast.error(errorMessage);
