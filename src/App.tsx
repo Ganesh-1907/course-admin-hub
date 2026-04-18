@@ -35,9 +35,9 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/home" element={<Navigate to="/dashboard" replace />} />
             <Route path="/login" element={<Login />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
-            
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <Dashboard />
@@ -76,6 +76,8 @@ const App = () => (
             <Route path="/enquiries" element={
               <ProtectedRoute>
                 <Enquiries />
+              </ProtectedRoute>
+            } />
             <Route path="/mentors" element={
               <ProtectedRoute>
                 <MentorListing />
