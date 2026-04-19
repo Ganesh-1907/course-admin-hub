@@ -5,6 +5,7 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import PageLoader from "@/components/ui/page-loader";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog,
@@ -249,9 +250,7 @@ const CourseListing = () => {
         {/* Table */}
         <div className="table-container overflow-x-auto">
           {loading ? (
-            <div className="flex justify-center items-center py-8">
-              <div className="text-muted-foreground">Loading courses...</div>
-            </div>
+            <PageLoader className="py-8" />
           ) : courses.length === 0 ? (
             <div className="flex justify-center items-center py-8">
               <div className="text-muted-foreground">No courses found</div>

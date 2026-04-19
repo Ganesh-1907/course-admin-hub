@@ -1,9 +1,10 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { ArrowLeft, Calendar, Tag, DollarSign, Loader } from "lucide-react";
+import { ArrowLeft, Calendar, Tag, DollarSign } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import PageLoader from "@/components/ui/page-loader";
 import { toast } from "sonner";
 import { getCourseById } from "@/services/api";
 
@@ -52,9 +53,7 @@ const CourseDetails = () => {
   if (loading) {
     return (
       <AdminLayout>
-        <div className="flex items-center justify-center py-12">
-          <Loader className="w-8 h-8 animate-spin text-primary" />
-        </div>
+        <PageLoader />
       </AdminLayout>
     );
   }

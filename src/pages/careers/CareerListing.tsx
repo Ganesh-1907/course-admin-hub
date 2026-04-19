@@ -5,6 +5,7 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import PageLoader from "@/components/ui/page-loader";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog,
@@ -152,9 +153,7 @@ const CareerListing = () => {
         {/* Table */}
         <div className="table-container overflow-x-auto">
           {loading ? (
-            <div className="flex justify-center items-center py-12">
-              <div className="text-muted-foreground">Loading careers...</div>
-            </div>
+            <PageLoader />
           ) : careers.length === 0 ? (
             <div className="flex flex-col justify-center items-center py-12 text-center">
               <Briefcase className="w-12 h-12 text-muted/30 mb-4" />

@@ -7,11 +7,12 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import PageLoader from "@/components/ui/page-loader";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
-import { getDashboardStats, getServiceTypes } from "@/services/api";
+import { getDashboardStats } from "@/services/api";
 
 const COLORS = ["hsl(210, 100%, 45%)", "hsl(200, 85%, 55%)", "hsl(180, 70%, 45%)", "hsl(160, 60%, 45%)", "hsl(145, 65%, 42%)", "hsl(38, 92%, 50%)"];
 
@@ -37,9 +38,15 @@ const Dashboard = () => {
   
   const [isExporting, setIsExporting] = useState(false);
   const dashboardRef = useRef<HTMLDivElement>(null);
+  const hasDashboardData =
+    stats.length > 0 ||
+    registrationData.length > 0 ||
+    courseTypeData.length > 0 ||
+    topCourses.length > 0;
 
   const fetchDashboardData = async () => {
-    setLoading(true);
+    setLoading(!hasDashboardData);
+
     try {
       const filters = {
         type: appliedFilters.type,
@@ -83,30 +90,22 @@ const Dashboard = () => {
         setRegistrationData(Array.isArray(data.registrationsOverTime) ? data.registrationsOverTime : []);
         setCourseTypeData(Array.isArray(data.coursesByType) ? data.coursesByType : []);
         setTopCourses(Array.isArray(data.topCourses) ? data.topCourses : []);
+        setServiceTypesList(
+          Array.isArray(data.serviceTypes) ? data.serviceTypes.map((serviceType: { name: string }) => serviceType.name) : [],
+        );
+        return;
       } else {
         toast.error("Failed to load dashboard stats. Please try again.");
       }
     } catch (error) {
-      toast.error("Unable to connect to service. Please check your network.");
+      const fallbackMessage = hasDashboardData
+        ? "Couldn't refresh dashboard data. Showing the last loaded results."
+        : "Unable to load dashboard data right now. Please try again.";
+      toast.error(error instanceof Error ? error.message : fallbackMessage);
     } finally {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    const fetchServiceTypesList = async () => {
-      try {
-        const response = await getServiceTypes();
-        if (response.success && response.data) {
-          const names = response.data.map((st: any) => st.name);
-          setServiceTypesList(names);
-        }
-      } catch (error) {
-        console.error("Failed to fetch service types:", error);
-      }
-    };
-    fetchServiceTypesList();
-  }, []);
 
   useEffect(() => {
     fetchDashboardData();
@@ -261,9 +260,7 @@ const Dashboard = () => {
         <div ref={dashboardRef} className="space-y-6">
           {/* Loading State */}
           {loading ? (
-            <div className="flex justify-center items-center py-12">
-              <Loader className="w-8 h-8 animate-spin text-primary" />
-            </div>
+            <PageLoader />
           ) : (
             <>
               {/* Stats Grid */}

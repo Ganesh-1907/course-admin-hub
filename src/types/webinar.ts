@@ -11,6 +11,8 @@ export interface Webinar {
   secondaryMentorId: number | null;
   createdAt: string;
   updatedAt: string;
+  primaryMentor?: WebinarMentorSummary | null;
+  secondaryMentor?: WebinarMentorSummary | null;
 }
 
 export interface WebinarMentorSummary {

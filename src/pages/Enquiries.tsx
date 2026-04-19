@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import PageLoader from "@/components/ui/page-loader";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog,
@@ -215,9 +216,7 @@ const Enquiries = () => {
         {/* Table */}
         <div className="table-container overflow-x-auto">
           {loading ? (
-            <div className="flex justify-center items-center py-12">
-              <Loader className="w-6 h-6 animate-spin text-primary" />
-            </div>
+            <PageLoader />
           ) : enquiries.length === 0 ? (
             <div className="flex flex-col justify-center items-center py-16 gap-3">
               <MessageSquare className="w-12 h-12 text-muted-foreground/40" />

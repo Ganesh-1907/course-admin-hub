@@ -5,10 +5,55 @@ import type { WebinarPayload } from '../types/webinar';
 
 const API_BASE_URL = env.API_BASE_URL;
 const APP_TOKEN = env.APP_TOKEN;
+const GET_RETRY_ATTEMPTS = 3;
+const RETRYABLE_STATUS_CODES = new Set([408, 425, 429, 500, 502, 503, 504]);
+const RETRYABLE_ERROR_PATTERNS = [
+  /failed to fetch/i,
+  /network\s?error/i,
+  /network request failed/i,
+  /failed query:/i,
+  /timeout/i,
+  /load failed/i,
+];
 
 // Store token in localStorage
 const TOKEN_KEY = 'auth_token';
 const USER_KEY = 'user_data';
+
+const delay = (milliseconds: number) =>
+  new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+
+const sanitizeApiErrorMessage = (message: string | undefined, statusCode?: number) => {
+  if (message?.includes('Failed query:')) {
+    return 'Temporary database error. Please try again.';
+  }
+
+  if (!message || message === 'API Error') {
+    return statusCode && statusCode >= 500 ? 'Server error. Please try again.' : 'API Error';
+  }
+
+  return message;
+};
+
+const shouldRetryRequest = (
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
+  statusCode?: number,
+  error?: unknown,
+) => {
+  if (method !== 'GET') {
+    return false;
+  }
+
+  if (typeof statusCode === 'number') {
+    return RETRYABLE_STATUS_CODES.has(statusCode);
+  }
+
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  return RETRYABLE_ERROR_PATTERNS.some((pattern) => pattern.test(error.message));
+};
 
 export const setAuthToken = (token: string) => {
   localStorage.setItem(TOKEN_KEY, token);
@@ -82,14 +127,41 @@ const apiRequest = async (
     }
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+  const maxAttempts = method === 'GET' ? GET_RETRY_ATTEMPTS : 1;
+  let lastError: Error | null = null;
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'API Error' }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: 'API Error' }));
+        const errorMessage = sanitizeApiErrorMessage(error.message, response.status);
+
+        if (attempt < maxAttempts && shouldRetryRequest(method, response.status)) {
+          await delay(attempt * 400);
+          continue;
+        }
+
+        throw new Error(errorMessage || `HTTP ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      const normalizedError = error instanceof Error ? error : new Error('API Error');
+      const sanitizedError = new Error(sanitizeApiErrorMessage(normalizedError.message));
+      lastError = sanitizedError;
+
+      if (attempt < maxAttempts && shouldRetryRequest(method, undefined, normalizedError)) {
+        await delay(attempt * 400);
+        continue;
+      }
+
+      throw sanitizedError;
+    }
   }
 
-  return await response.json();
+  throw lastError ?? new Error('API Error');
 };
 
 // ==================== ADMIN AUTHENTICATION ====================

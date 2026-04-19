@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, Download, Eye, Mail, Phone, Calendar, Briefcase, ExternalLink, Loader2, Search } from "lucide-react";
+import { ChevronLeft, Download, Eye, Mail, Phone, Calendar, Briefcase, ExternalLink, Search } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import PageLoader from "@/components/ui/page-loader";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
@@ -161,9 +162,7 @@ const Applications = () => {
         {/* Table */}
         <div className="table-container">
           {loading ? (
-            <div className="flex justify-center items-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
+            <PageLoader />
           ) : applications.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-xl border border-dashed border-slate-200">
               <p className="text-muted-foreground">No applications match your filters.</p>

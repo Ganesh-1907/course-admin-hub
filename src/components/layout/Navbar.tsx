@@ -19,11 +19,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const { user, logout } = useAuth();
 
   const isActive = (path: string) => location.pathname === path;
   const isCoursesActive = location.pathname.startsWith("/courses");
@@ -31,29 +33,33 @@ const Navbar = () => {
   const isMentorsActive = location.pathname.startsWith("/mentors");
   const isWebinarsActive = location.pathname.startsWith("/webinars");
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setShowLogoutDialog(false);
-    navigate("/login");
+    await logout();
+    navigate("/login", { replace: true });
   };
 
   return (
     <>
-      <nav className="sticky top-0 z-50 bg-card border-b border-border shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+      <nav className="sticky top-0 z-50 w-full border-b border-border bg-card/95 shadow-sm backdrop-blur">
+        <div className="w-full px-4 sm:px-6 lg:px-8">
+          <div className="flex min-h-16 items-center gap-4 py-3">
             {/* Logo */}
-            <Link to="/dashboard" className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+            <Link to="/dashboard" className="flex min-w-0 items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary">
                 <BookOpen className="w-6 h-6 text-primary-foreground" />
               </div>
-              <span className="text-xl font-bold text-foreground hidden sm:block">Viovn Admin Dashboard</span>
+              <div className="min-w-0">
+                <p className="truncate text-base font-semibold text-foreground sm:text-lg">VIovn Technologies</p>
+                <p className="hidden text-xs text-muted-foreground sm:block">Admin Dashboard</p>
+              </div>
             </Link>
 
             {/* Center Menu */}
-            <div className="hidden md:flex items-center gap-1">
+            <div className="hidden lg:flex min-w-0 flex-1 items-center justify-center gap-1 overflow-x-auto whitespace-nowrap">
               <Link
                 to="/dashboard"
-                className={cn("nav-link flex items-center gap-2", isActive("/dashboard") && "nav-link-active")}
+                className={cn("nav-link flex shrink-0 items-center gap-2", isActive("/dashboard") && "nav-link-active")}
               >
                 <LayoutDashboard className="w-4 h-4" />
                 Dashboard
@@ -63,7 +69,7 @@ const Navbar = () => {
                 <DropdownMenuTrigger asChild>
                   <button
                     className={cn(
-                      "nav-link flex items-center gap-2",
+                      "nav-link flex shrink-0 items-center gap-2",
                       isCoursesActive && "nav-link-active"
                     )}
                   >
@@ -96,7 +102,7 @@ const Navbar = () => {
 
               <Link
                 to="/registrations"
-                className={cn("nav-link flex items-center gap-2", isActive("/registrations") && "nav-link-active")}
+                className={cn("nav-link flex shrink-0 items-center gap-2", isActive("/registrations") && "nav-link-active")}
               >
                 <Users className="w-4 h-4" />
                 Registrations
@@ -104,7 +110,7 @@ const Navbar = () => {
 
               <Link
                 to="/enquiries"
-                className={cn("nav-link flex items-center gap-2", isEnquiriesActive && "nav-link-active")}
+                className={cn("nav-link flex shrink-0 items-center gap-2", isEnquiriesActive && "nav-link-active")}
               >
                 <MessageSquare className="w-4 h-4" />
                 Enquiries
@@ -112,7 +118,7 @@ const Navbar = () => {
 
               <Link
                 to="/careers"
-                className={cn("nav-link flex items-center gap-2", location.pathname.startsWith("/careers") && "nav-link-active")}
+                className={cn("nav-link flex shrink-0 items-center gap-2", location.pathname.startsWith("/careers") && "nav-link-active")}
               >
                 <Briefcase className="w-4 h-4" />
                 Careers
@@ -121,7 +127,7 @@ const Navbar = () => {
                 <DropdownMenuTrigger asChild>
                   <button
                     className={cn(
-                      "nav-link flex items-center gap-2",
+                      "nav-link flex shrink-0 items-center gap-2",
                       isMentorsActive && "nav-link-active"
                     )}
                   >
@@ -140,7 +146,7 @@ const Navbar = () => {
                   <DropdownMenuItem asChild>
                     <Link to="/mentors" className="flex items-center gap-2 cursor-pointer">
                       <List className="w-4 h-4" />
-                      List Mentor
+                      Mentor List
                     </Link>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -150,7 +156,7 @@ const Navbar = () => {
                 <DropdownMenuTrigger asChild>
                   <button
                     className={cn(
-                      "nav-link flex items-center gap-2",
+                      "nav-link flex shrink-0 items-center gap-2",
                       isWebinarsActive && "nav-link-active"
                     )}
                   >
@@ -169,7 +175,7 @@ const Navbar = () => {
                   <DropdownMenuItem asChild>
                     <Link to="/webinars" className="flex items-center gap-2 cursor-pointer">
                       <List className="w-4 h-4" />
-                      List Webinar
+                      Webinar List
                     </Link>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -177,14 +183,14 @@ const Navbar = () => {
             </div>
 
             {/* Right Side */}
-            <div className="flex items-center gap-2">
+            <div className="ml-auto flex shrink-0 items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button className="flex items-center gap-2 p-2 rounded-lg hover:bg-secondary transition-colors">
                     <div className="w-8 h-8 bg-secondary rounded-full flex items-center justify-center">
                       <User className="w-4 h-4 text-secondary-foreground" />
                     </div>
-                    <span className="hidden sm:block text-sm font-medium text-foreground">Admin</span>
+                    <span className="hidden sm:block text-sm font-medium text-foreground">{user?.name || "Admin"}</span>
                     <ChevronDown className="w-4 h-4 text-muted-foreground" />
                   </button>
                 </DropdownMenuTrigger>
@@ -207,7 +213,7 @@ const Navbar = () => {
         </div>
 
         {/* Mobile Menu */}
-        <div className="md:hidden border-t border-border px-4 py-2 flex items-center justify-around">
+        <div className="lg:hidden border-t border-border px-4 py-2 flex items-center justify-around">
           <Link
             to="/dashboard"
             className={cn("p-2 rounded-lg transition-colors", isActive("/dashboard") ? "bg-secondary text-primary" : "text-muted-foreground")}
