@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Calendar, Clock3, Loader, MapPin, UserRound, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Calendar, Clock3, MapPin, UserRound, Image as ImageIcon } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import PageLoader from "@/components/ui/page-loader";
 import { getWebinarById } from "@/services/api";
 import type { WebinarDetails as WebinarDetailsType } from "@/types/webinar";
 import { toast } from "sonner";
@@ -64,9 +65,7 @@ const WebinarDetails = () => {
   if (loading) {
     return (
       <AdminLayout>
-        <div className="flex items-center justify-center py-12">
-          <Loader className="h-8 w-8 animate-spin text-primary" />
-        </div>
+        <PageLoader />
       </AdminLayout>
     );
   }

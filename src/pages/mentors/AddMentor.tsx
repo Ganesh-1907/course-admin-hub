@@ -5,6 +5,7 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import PageLoader from "@/components/ui/page-loader";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -211,9 +212,7 @@ const AddMentor = () => {
   if (loadingMentor) {
     return (
       <AdminLayout>
-        <div className="admin-card p-6 text-center text-muted-foreground">
-          Loading mentor details...
-        </div>
+        <PageLoader label="Loading mentor details..." />
       </AdminLayout>
     );
   }

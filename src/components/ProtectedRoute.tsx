@@ -1,4 +1,5 @@
 import { Navigate, useLocation } from 'react-router-dom';
+import PageLoader from '@/components/ui/page-loader';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface ProtectedRouteProps {
@@ -11,14 +12,7 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 
   // Show loading state while checking authentication
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-          <p className="mt-4 text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
+    return <PageLoader fullScreen label="Loading..." />;
   }
 
   // Redirect to login if not authenticated

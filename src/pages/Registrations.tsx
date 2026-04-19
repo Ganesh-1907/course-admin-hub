@@ -4,6 +4,7 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import PageLoader from "@/components/ui/page-loader";
 import { toast } from "sonner";
 import { getAllRegistrations, getRegistrationDetail, exportRegistrations } from "@/services/api";
 
@@ -164,9 +165,7 @@ const Registrations = () => {
         {/* Table */}
         <div className="table-container overflow-x-auto">
           {loading ? (
-            <div className="flex justify-center items-center py-8">
-              <Loader className="w-6 h-6 animate-spin text-primary" />
-            </div>
+            <PageLoader className="py-8" />
           ) : registrations.length === 0 ? (
             <div className="flex justify-center items-center py-8">
               <div className="text-muted-foreground">No registrations found</div>

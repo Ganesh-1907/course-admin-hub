@@ -1,13 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight, Eye, Filter, Search, Video, X } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { COUNTRY_OPTIONS } from "@/constants/countries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import PageLoader from "@/components/ui/page-loader";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getAllMentors, getAllWebinars } from "@/services/api";
-import type { Mentor } from "@/types/mentor";
+import { getAllWebinars } from "@/services/api";
 import type { Webinar } from "@/types/webinar";
 import { toast } from "sonner";
 
@@ -31,7 +31,6 @@ const formatWebinarTime = (value: string) => {
 const WebinarListing = () => {
   const navigate = useNavigate();
   const [webinars, setWebinars] = useState<Webinar[]>([]);
-  const [mentors, setMentors] = useState<Mentor[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -41,27 +40,8 @@ const WebinarListing = () => {
   });
 
   useEffect(() => {
-    const fetchMentors = async () => {
-      try {
-        const response = await getAllMentors(1, 500, {
-          sortBy: "name",
-          order: "ASC",
-        });
-
-        if (response.success) {
-          setMentors(response.data?.mentors || []);
-        }
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Failed to load mentors");
-      }
-    };
-
-    fetchMentors();
-  }, []);
-
-  useEffect(() => {
     const fetchWebinars = async () => {
-      setLoading(true);
+      setLoading(webinars.length === 0);
 
       try {
         const response = await getAllWebinars(currentPage, itemsPerPage, {
@@ -78,12 +58,14 @@ const WebinarListing = () => {
         }
 
         toast.error(response.message || "Failed to load webinars");
-        setWebinars([]);
-        setTotalPages(1);
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Failed to load webinars");
-        setWebinars([]);
-        setTotalPages(1);
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : webinars.length > 0
+              ? "Couldn't refresh webinars. Showing the last loaded data."
+              : "Failed to load webinars",
+        );
       } finally {
         setLoading(false);
       }
@@ -92,17 +74,10 @@ const WebinarListing = () => {
     fetchWebinars();
   }, [currentPage, filters]);
 
-  const mentorNameMap = useMemo(
-    () => mentors.reduce<Record<number, string>>((mentorLookup, mentor) => {
-      mentorLookup[mentor.id] = mentor.name;
-      return mentorLookup;
-    }, {}),
-    [mentors],
-  );
-
-  const getMentorName = (mentorId?: number | null) => {
+  const getMentorName = (mentorName?: string | null, mentorId?: number | null) => {
+    if (mentorName) return mentorName;
     if (!mentorId) return "N/A";
-    return mentorNameMap[mentorId] || `Mentor #${mentorId}`;
+    return `Mentor #${mentorId}`;
   };
 
   const handleSearchChange = (value: string) => {
@@ -195,9 +170,7 @@ const WebinarListing = () => {
 
         <div className="table-container overflow-x-auto">
           {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="text-muted-foreground">Loading webinars...</div>
-            </div>
+            <PageLoader className="py-8" />
           ) : webinars.length === 0 ? (
             <div className="flex items-center justify-center py-8">
               <div className="text-muted-foreground">No webinars found</div>
@@ -224,8 +197,12 @@ const WebinarListing = () => {
                     <td className="px-4 py-3 text-foreground">
                       {formatWebinarTime(webinar.startTime)} - {formatWebinarTime(webinar.endTime)}
                     </td>
-                    <td className="px-4 py-3 text-foreground">{getMentorName(webinar.primaryMentorId)}</td>
-                    <td className="px-4 py-3 text-foreground">{getMentorName(webinar.secondaryMentorId)}</td>
+                    <td className="px-4 py-3 text-foreground">
+                      {getMentorName(webinar.primaryMentor?.name, webinar.primaryMentorId)}
+                    </td>
+                    <td className="px-4 py-3 text-foreground">
+                      {getMentorName(webinar.secondaryMentor?.name, webinar.secondaryMentorId)}
+                    </td>
                     <td className="px-4 py-3 text-foreground">{webinar.location}</td>
                     <td className="px-4 py-3 text-foreground">
                       <a

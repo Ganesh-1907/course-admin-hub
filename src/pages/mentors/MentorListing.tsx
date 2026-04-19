@@ -5,6 +5,7 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import PageLoader from "@/components/ui/page-loader";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getAllMentors } from "@/services/api";
 import type { Mentor } from "@/types/mentor";
@@ -160,9 +161,7 @@ const MentorListing = () => {
 
         <div className="table-container overflow-x-auto">
           {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="text-muted-foreground">Loading mentors...</div>
-            </div>
+            <PageLoader className="py-8" />
           ) : mentors.length === 0 ? (
             <div className="flex items-center justify-center py-8">
               <div className="text-muted-foreground">No mentors found</div>
